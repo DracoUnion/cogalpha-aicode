@@ -20,7 +20,11 @@ from .prompt_loader import PromptLibrary
 logger = logging.getLogger(__name__)
 
 
-def load_panel(path: str) -> pd.DataFrame:
+def load_panel(
+    path: str, 
+    date_col: str = 'trade_date',
+    ticker_col: str = 'ts_code',
+) -> pd.DataFrame:
     """Load an OHLCV panel from parquet or CSV.
 
     Expected index: MultiIndex (date, ticker). Columns typically include
@@ -32,21 +36,18 @@ def load_panel(path: str) -> pd.DataFrame:
         df = pd.read_parquet(p)
     else:
         df = pd.read_csv(p, parse_dates=False)
-        if isinstance(df.index, pd.MultiIndex):
-            df = df
-        elif not isinstance(df.index, pd.MultiIndex):
-            # Assume first two columns are date, ticker.
-            cols = list(df.columns)
-            df = df.set_index([cols[0], cols[1]])
-            df.index = df.index.set_names(["date", "ticker"])
 
+    df.rename(columns={
+        date_col: "date",
+        ticker_col: "ticker",
+    }, inplace=True)
     if not isinstance(df.index, pd.MultiIndex):
-        df = df.reset_index()
+        # df = df.reset_index()
         if "date" in df.columns and "ticker" in df.columns:
             df = df.set_index(["date", "ticker"]).sort_index()
         else:
             raise ValueError("Panel must have a (date, ticker) MultiIndex, or date+ticker columns.")
-
+    
     # Normalize the date level to a datetime index.
     df = df.copy()
     if not pd.api.types.is_datetime64_any_dtype(df.index.get_level_values("date")):
