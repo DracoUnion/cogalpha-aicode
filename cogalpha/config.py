@@ -8,19 +8,40 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Tuple
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class LLMSettings(BaseSettings):
-    """OpenAI-compatible endpoint settings."""
+    """OpenAI-compatible endpoint settings.
+
+    Project-specific ``COGALPHA_*`` env vars take precedence; the standard
+    ``OPENAI_BASE_URL`` / ``OPENAI_CHAT_MODEL`` / ``OPENAI_API_KEY`` vars act
+    as fallbacks so the standard OpenAI client env vars work unchanged.
+    """
 
     model_config = SettingsConfigDict(env_prefix="COGALPHA_", env_file=".env", extra="ignore")
 
-    api_key: Optional[str] = Field(default=None, description="OpenAI API key (or set OPENAI_API_KEY).")
-    base_url: Optional[str] = Field(default=None, description="Custom base URL for a compatible endpoint.")
-    model: str = Field(default="gpt-4o-mini", description="Default generation/evolution model.")
-    quality_model: str = Field(default="gpt-4o-mini", description="Model used by the multi-agent quality checker.")
+    api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("COGALPHA_API_KEY", "OPENAI_API_KEY"),
+        description="OpenAI API key (COGALPHA_API_KEY overrides OPENAI_API_KEY).",
+    )
+    base_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("COGALPHA_BASE_URL", "OPENAI_BASE_URL"),
+        description="Custom base URL for a compatible endpoint (COGALPHA_BASE_URL overrides OPENAI_BASE_URL).",
+    )
+    model: str = Field(
+        default="gpt-4o-mini",
+        validation_alias=AliasChoices("COGALPHA_MODEL", "OPENAI_CHAT_MODEL"),
+        description="Default generation/evolution model (COGALPHA_MODEL overrides OPENAI_CHAT_MODEL).",
+    )
+    quality_model: str = Field(
+        default="gpt-4o-mini",
+        validation_alias=AliasChoices("COGALPHA_QUALITY_MODEL", "OPENAI_CHAT_MODEL"),
+        description="Model used by the multi-agent quality checker (COGALPHA_QUALITY_MODEL overrides OPENAI_CHAT_MODEL).",
+    )
     max_tokens: int = Field(default=4096, description="Max tokens per completion (paper: 4096).")
     timeout: float = Field(default=120.0, description="Request timeout in seconds.")
     max_retries: int = Field(default=3, description="OpenAI client retry count.")

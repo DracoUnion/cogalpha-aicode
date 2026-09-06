@@ -38,10 +38,14 @@ python run.py --self-test
 # 离线端到端演示（合成数据，无需 API key）
 python run.py --demo
 
-# 真实运行（需 OPENAI_API_KEY）
+# 真实运行（需 API key）
 export OPENAI_API_KEY=sk-...
 python run.py --data data.parquet --horizon 10 --output ./out --model gpt-4o-mini
 ```
+
+若不使用官方端点而是走网关/代理，可设置 `OPENAI_BASE_URL`（地址）与
+`OPENAI_CHAT_MODEL`（模型名），两者同样适用 openai 客户端；项目自身的
+`COGALPHA_BASE_URL` / `COGALPHA_MODEL` 优先于这两个变量。
 
 ## 关键设计
 
