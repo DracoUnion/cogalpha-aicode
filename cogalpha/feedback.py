@@ -24,14 +24,14 @@ logger = logging.getLogger(__name__)
 def _render_examples(factors: List[Factor]) -> str:
     lines = []
     for i, f in enumerate(factors, 1):
-        lines.append(f"<<factor {i}>>")
+        lines.append(f"[factor-{i}]")
         lines.append("State: valid")
         lines.append(f"Metrics: IC / RankIC / ICIR / RankICIR")
         lines.append("Code:")
-        lines.append(f"<<function {i}>>")
+        lines.append(f"[function-{i}]")
         lines.append(textwrap.indent(f.code, "    ") if f.code else "")
-        lines.append(f"<</function {i}>>")
-        lines.append(f"<</factor {i}>>")
+        lines.append(f"[/function-{i}]")
+        lines.append(f"[/factor-{i}]")
     return "\n".join(lines)
 
 

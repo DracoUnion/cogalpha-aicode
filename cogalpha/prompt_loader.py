@@ -130,36 +130,37 @@ Based on these failures, use them as heuristic warnings to inform new factor cre
 Seek innovative methods to generate more effective, robust, and adaptable factors, ensuring they work well in diverse market conditions."""
 
 _EFFECTIVE_SUMMARY = """You are given several factor functions in the format:
-            <<factor N>>
-            State: valid
-            Metrics: IC / RankIC / ICIR / RankICIR
-            Code:
-            [function-N]
-                def <factor_name>(df):
-                    \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
-                    df_copy = df.copy()
-                    # factor computation
-                    return df_copy['<factor_name>']
-            [/function-N]
-            <</factor N>>
 
-            You are tasked with analyzing the given financial factors. For each factor, provide the following in a clear and structured format:
-            1. **One Clear Idea**: one sentence stating the core intuition only.
-            2. **Short Formula**: a single one-line math/pseudocode expression in backticks that represents the factor (no comments, no extra code)
-            3. **Efficiency Analysis**: In one sentence, explain why this factor is likely to be effective in real-world financial models (e.g., solid economic intuition, robustness across regimes, low redundancy, and no look-ahead/leakage).
-            IMPORTANT: Do not modify the factor names or codes in any way. Use the exact same name as input.
-            Return your answer in the following format:
-            <factor_name>:
-                **One Clear Idea**: <description>
-                **Short Formula**: `<one-line formula>`
-                **Efficiency Analysis**: <analysis>
+[factor-N]
+State: valid
+Metrics: IC / RankIC / ICIR / RankICIR
+Code:
+[function-N]
+def <factor_name>(df):
+    \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
+    df_copy = df.copy()
+    # factor computation
+    return df_copy['<factor_name>']
+[/function-N]
+[/factor-N]
+
+You are tasked with analyzing the given financial factors. For each factor, provide the following in a clear and structured format:
+1. **One Clear Idea**: one sentence stating the core intuition only.
+2. **Short Formula**: a single one-line math/pseudocode expression in backticks that represents the factor (no comments, no extra code)
+3. **Efficiency Analysis**: In one sentence, explain why this factor is likely to be effective in real-world financial models (e.g., solid economic intuition, robustness across regimes, low redundancy, and no look-ahead/leakage).
+IMPORTANT: Do not modify the factor names or codes in any way. Use the exact same name as input.
+Return your answer in the following format:
+<factor_name>:
+**One Clear Idea**: <description>
+**Short Formula**: `<one-line formula>`
+**Efficiency Analysis**: <analysis>
 
 {factor_names}
 
 {factor_examples}"""
 
 _INEFFECTIVE_SUMMARY = """You are given several factor functions in the format:
-            <<factor N>>
+            [factor-N]
             State: low_metrics / dependent / unstable
             Metrics: IC / RankIC / ICIR / RankICIR
             Code:
@@ -170,7 +171,7 @@ _INEFFECTIVE_SUMMARY = """You are given several factor functions in the format:
                     # factor computation
                     return df_copy['<factor_name>']
             [/function-N]
-            <</factor N>>
+            [/factor-N]
 
             You are tasked with analyzing the given financial factors. For each factor, provide the following in a clear and structured format:
             1. **One Clear Idea**: one sentence stating the core intuition only.
@@ -779,9 +780,9 @@ _QUALITY_CODE_AGENT = """You are a code reviewer for quantitative alpha factors.
      - The use of `while True` or any potentially infinite loop is **strictly prohibited**.
    - If such patterns are present, mark the review as **FAIL**, explain the issue clearly, and suggest vectorized alternatives (NumPy/Pandas operations, `groupby`/`transform`/`rolling`, bounded `apply`, or single-level iteration aided by `itertools.product` without introducing nesting).
 
-<<function>>
+```
 {code}
-<</function>>
+```
 
 ### Hard Complexity Constraints (must-follow)
 Remember: **Simple factors are often the most powerful and stable.**
@@ -874,9 +875,9 @@ Remember: **Simple factors are often the most powerful and stable.**
 ---
 
 ### Original function:
-<<faulty code>>
+```
 {old_code}
-<</faulty code>>
+```
 
 ---
 
@@ -995,9 +996,9 @@ Your evaluation should focus on **Practical Soundness**, with a professional min
 
 ### Factor under review:
 
-<<function>>
+```
 {new_factor_code}
-<</function>>
+```
 
 The input DataFrame has a MultiIndex of (date, ticker), grouped by ticker (i.e., a time series per stock).
 Each input DataFrame is a time series of a single stock.
@@ -1041,9 +1042,9 @@ The following Python function was reviewed and **did NOT pass the logical soundn
 ---
 
 ### Original function:
-<<previous function>>
+```
 {old_code}
-<</previous function>>
+```
 
 ---
 
@@ -1178,9 +1179,9 @@ Your task is to generate an improved version of the following alpha factor by ap
 
 ### Original Factor:
 
-<<original factor>>
+```
 {original_factor_code}
-<</original factor>>
+```
 
 ---
 
@@ -1299,17 +1300,17 @@ Your task is to generate a new alpha factor by **intelligently combining the fol
 
 ### Parent Factor 1:
 
-<<parent factor 1>>
+```
 {parent_factor_1_code}
-<</parent factor 1>>
+```
 
 ---
 
 ### Parent Factor 2:
 
-<<parent factor 2>>
+```
 {parent_factor_2_code}
-<</parent factor 2>>
+```
 
 ---
 

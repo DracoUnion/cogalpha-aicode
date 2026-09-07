@@ -154,7 +154,7 @@ def run_selftest() -> int:
     assert any("infinite" in i for i in executor.check_code_static(bad2, "g"))
 
     parsed = executor.parse_generated_code(
-        "<<function 1>>\ndef x(df):\n    df_copy = df.copy()\n    return df_copy['x']\n<</function 1>>"
+        "[function-1]\ndef x(df):\n    df_copy = df.copy()\n    return df_copy['x']\n[/function-1]"
     )
     assert len(parsed) == 1 and parsed[0].name == "x", parsed
     print(f"Self-test passed. Parsed {len(parsed)} function(s).")
