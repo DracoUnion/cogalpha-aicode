@@ -30,7 +30,7 @@ from .agent import Agent
 from .models import CogAlphaConfig
 from .data_loader import build_column_desc_manual, describe_columns
 from .llm_client import LLMClient
-from .prompt_loader import PromptLibrary
+from .prompt_loader import _AGENTS
 from .quality import QualityGate
 from .models import Factor, FeedbackSummary, ParsedFunction, SearchResult
 
@@ -42,9 +42,8 @@ class CogAlpha:
 
     def __init__(self, cfg: CogAlphaConfig) -> None:
         self.cfg = cfg
-        self.lib = PromptLibrary(cfg.prompts_dir)
         self.llm = LLMClient(cfg)
-        self.agent = Agent(self.llm, self.lib)
+        self.agent = Agent(self.llm)
         self._logger = logger
 
     # ------------------------------------------------------------------ #
@@ -85,7 +84,7 @@ class CogAlpha:
     def _describe(self, df: pd.DataFrame) -> str:
         if self.cfg.llm.api_key or True:
             try:
-                return describe_columns(df, self.llm, self.lib)
+                return describe_columns(df, self.llm)
             except Exception as exc:  # pragma: no cover - API dependent
                 self._logger.warning("column_description failed: %s; using manual block", exc)
         return build_column_desc_manual(list(df.columns))
@@ -174,7 +173,7 @@ class CogAlpha:
         columns_desc = self._describe(df)
         columns_num = len(df.columns)
 
-        gate = QualityGate(self.llm, self.lib, columns_desc, columns_num, self.cfg, agent=self.agent)
+        gate = QualityGate(self.llm, columns_desc, columns_num, self.cfg, agent=self.agent)
         gen = self.cfg.generation
         agent_ids = self.agent.list_agents()
 
@@ -186,7 +185,7 @@ class CogAlpha:
         while len(parent_pool) < gen.initial_pool_size and attempts < gen.initial_pool_size * 4:
             attempts += 1
             agent_id = random.choice(agent_ids)
-            level, _, _ = self.lib.agents[agent_id]
+            level, _, _ = _AGENTS[agent_id]
             pfs = self.agent.generate_code(
                 agent_id, columns_desc, columns_num,
                 gen.num_per_request, self.cfg.forecast_horizon, None,
@@ -212,7 +211,7 @@ class CogAlpha:
             for agent_id in agent_ids:
                 self._logger.info("== evolution search %d/%d, agent %s ==",
                                   search_idx + 1, gen.evolution_searches, agent_id)
-                level, _, _ = self.lib.agents[agent_id]
+                level, _, _ = _AGENTS[agent_id]
                 parent_pool, result = self._evolve_agent(
                     df, label, columns_desc, columns_num, gate, agent_id, level, parent_pool, result
                 )
@@ -344,7 +343,7 @@ class CogAlpha:
         effective = selection.rank_factors(valid)[: cfg.feedback.top_effective]
         ineffective = selection.rank_factors(valid, key="ic")[-cfg.feedback.worst_ineffective:] if valid else []
         try:
-            return feedback_mod.build_feedback(effective, ineffective, self.llm, self.lib)
+            return feedback_mod.build_feedback(effective, ineffective, self.llm)
         except Exception as exc:  # pragma: no cover - API dependent
             self._logger.warning("feedback build failed: %s", exc)
             return feedback_mod.deterministic_build_feedback(effective, ineffective)

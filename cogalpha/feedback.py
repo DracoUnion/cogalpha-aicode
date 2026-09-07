@@ -15,7 +15,7 @@ import textwrap
 from typing import List
 
 from .llm_client import LLMClient
-from .prompt_loader import PromptLibrary
+from .prompt_loader import _EFFECTIVE_SUMMARY, _INEFFECTIVE_SUMMARY, _SYSTEM_MESSAGE
 from .models import Factor, FeedbackSummary
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,6 @@ def build_feedback(
     effective: List[Factor],
     ineffective: List[Factor],
     llm: LLMClient,
-    lib: PromptLibrary,
 ) -> FeedbackSummary:
     """Produce effective/ineffective CoT summaries from sample factors."""
     effective_CoT, ineffective_CoT = "", ""
@@ -48,11 +47,11 @@ def build_feedback(
         size = min(len(effective), 6)
         sample = random.sample(effective, size)
         names = ", ".join(f.name for f in sample)
-        user = lib.effective_summary.replace("{factor_names}", names).replace(
+        user = _EFFECTIVE_SUMMARY.replace("{factor_names}", names).replace(
             "{factor_examples}", _render_examples(sample)
         )
         try:
-            effective_CoT = llm.complete_quality(lib.system_message, user)
+            effective_CoT = llm.complete_quality(_SYSTEM_MESSAGE, user)
         except Exception as exc:  # pragma: no cover - network/API dependent
             logger.warning("effective summary failed: %s", exc)
             effective_CoT = "; ".join(f.name for f in sample)
@@ -61,11 +60,11 @@ def build_feedback(
         size = min(len(ineffective), 8)
         sample = random.sample(ineffective, size)
         names = ", ".join(f.name for f in sample)
-        user = lib.ineffective_summary.replace("{factor_names}", names).replace(
+        user = _INEFFECTIVE_SUMMARY.replace("{factor_names}", names).replace(
             "{factor_examples}", _render_examples(sample)
         )
         try:
-            ineffective_CoT = llm.complete_quality(lib.system_message, user)
+            ineffective_CoT = llm.complete_quality(_SYSTEM_MESSAGE, user)
         except Exception as exc:  # pragma: no cover - network/API dependent
             logger.warning("ineffective summary failed: %s", exc)
             ineffective_CoT = "; ".join(f.name for f in sample)

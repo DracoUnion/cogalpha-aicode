@@ -9,12 +9,12 @@ English descriptions that are injected into every generation prompt via the
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional
+from typing import List
 
 import pandas as pd
 
 from .llm_client import LLMClient
-from .prompt_loader import PromptLibrary
+from .prompt_loader import _COLUMN_DESCRIPTION, _SYSTEM_MESSAGE
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 def describe_columns(
     df: pd.DataFrame,
     llm: LLMClient,
-    lib: PromptLibrary,
 ) -> str:
     """Turn column names into a `columns_desc` block.
 
@@ -33,12 +32,12 @@ def describe_columns(
     if not factor_cols:
         raise ValueError("The panel has no factor columns to describe.")
 
-    if llm is None or lib is None:
+    if llm is None:
         return "\n".join(f"- {c}" for c in factor_cols)
 
-    prompt = lib.column_description.replace("{factor_names}", ", ".join(factor_cols))
+    prompt = _COLUMN_DESCRIPTION.replace("{factor_names}", ", ".join(factor_cols))
     try:
-        raw = llm.complete_quality(lib.system_message, prompt)
+        raw = llm.complete_quality(_SYSTEM_MESSAGE, prompt)
     except Exception as exc:  # pragma: no cover - network/API dependent
         logger.warning("column_description LLM call failed (%s); using plain names", exc)
         return "\n".join(f"- {c}" for c in factor_cols)

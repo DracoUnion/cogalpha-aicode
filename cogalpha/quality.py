@@ -21,7 +21,7 @@ from . import executor
 from .agent import Agent
 from .models import CogAlphaConfig
 from .llm_client import LLMClient
-from .prompt_loader import PromptLibrary
+from .prompt_loader import _SYSTEM_MESSAGE
 from .models import JudgeResult, QualityResult
 
 logger = logging.getLogger(__name__)
@@ -35,15 +35,13 @@ class QualityGate:
     def __init__(
         self,
         llm: LLMClient,
-        lib: PromptLibrary,
         columns_desc: str,
         columns_num: int,
         cfg: CogAlphaConfig,
         agent: Optional[Agent] = None,
     ) -> None:
         self.llm = llm
-        self.lib = lib
-        self.agent = agent or Agent(llm, lib)
+        self.agent = agent or Agent(llm)
         self.columns_desc = columns_desc
         self.columns_num = columns_num
         self.cfg = cfg
@@ -66,14 +64,14 @@ class QualityGate:
             "judge_agent", new_factor_code=code
         )
         return self.llm.complete_json(
-            self.lib.system_message, prompt, JudgeResult
+            _SYSTEM_MESSAGE, prompt, JudgeResult
         )
 
     def code_quality(self, code: str) -> QualityResult:
         """Code Quality Agent: LLM review that complements static checks."""
         prompt = self.agent.build_quality_prompt("code_quality_agent", code=code)
         try:
-            raw = self.llm.complete_quality(self.lib.system_message, prompt)
+            raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
         except Exception as exc:  # pragma: no cover - API dependent
             logger.warning("code_quality LLM call failed: %s", exc)
             return QualityResult(status="correct")
@@ -91,7 +89,7 @@ class QualityGate:
             old_code=old_code,
             error=error,
         )
-        raw = self.llm.complete_quality(self.lib.system_message, prompt)
+        raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
         funcs = executor.parse_generated_code(raw)
         return funcs[0].code if funcs else old_code
 
@@ -104,7 +102,7 @@ class QualityGate:
             old_code=old_code,
             dynamic_feedback=feedback,
         )
-        raw = self.llm.complete_quality(self.lib.system_message, prompt)
+        raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
         funcs = executor.parse_generated_code(raw)
         return funcs[0].code if funcs else old_code
 

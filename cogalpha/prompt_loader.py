@@ -1,30 +1,28 @@
 """Prompt templates for CogAlpha, embedded directly (no external files).
 
-All prompts from `prompts/` are inlined here so the package is self-contained.
-Every prompt is a plain multi-line string whose dynamic parts are written as
-`{placeholder}` tokens — nothing is assembled at call time and nothing uses
-`str.format`. Substitution happens with `.replace(token, value)`.
+All prompts from `prompts/` are inlined here as module-level constants. Every
+prompt is a plain multi-line string whose dynamic parts are written as
+`{placeholder}` tokens — nothing is assembled at import time and nothing uses
+`str.format`. Substitution happens with `.replace(token, value)` in
+`agent.Agent`, which references the constants directly (there is no
+`PromptLibrary` wrapper).
 
-The public surface mirrors the original loader so downstream modules are
-unchanged:
+Available constants:
 
-  - shared block attributes: system_message, requirements, libraries,
-    output_format, base_factor_guidance, column_description,
-    effective_analysis, ineffective_analysis, effective_summary,
-    ineffective_summary, guidance_paraphrase
-  - `agents`: dict[agent_id, (level, intro, guidance)] for the 21 seven-level
+  - shared blocks: _SYSTEM_MESSAGE, _REQUIREMENTS, _LIBRARIES, _OUTPUT_FORMAT,
+    _BASE_FACTOR_GUIDANCE, _COLUMN_DESCRIPTION, _EFFECTIVE_ANALYSIS,
+    _INEFFECTIVE_ANALYSIS, _EFFECTIVE_SUMMARY, _INEFFECTIVE_SUMMARY,
+    _GUIDANCE_PARAPHRASE
+  - `_AGENTS`: dict[agent_id, (level, intro, guidance)] for the 21 seven-level
     generation agents
-  - `quality_templates` / `evolution_templates`: full user prompts for the
-    quality-checker and thinking-evolution agents
-
-A `prompts_dir` argument is accepted for backward compatibility but ignored —
-the templates live in this module. Prompt assembly and the LLM calls live in
-`agent.Agent`, which consumes these templates.
+  - `_QUALITY` / `_EVOLUTION`: full user prompts for the quality-checker and
+    thinking-evolution agents
+  - `_GENERATION_TEMPLATES`: composed per-agent generation user prompts
 """
 
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 # --------------------------------------------------------------------------- #
 # Shared blocks
@@ -1442,31 +1440,4 @@ _GENERATION_TEMPLATES: Dict[str, str] = {
     )
     for agent_id, (_level, intro, guidance) in _AGENTS.items()
 }
-
-
-# --------------------------------------------------------------------------- #
-# Public loader
-# --------------------------------------------------------------------------- #
-class PromptLibrary:
-    """Self-contained prompt library (prompts embedded, no external files)."""
-
-    def __init__(self, prompts_dir: Optional[str] = None) -> None:
-        # `prompts_dir` is accepted for backward compatibility but ignored.
-        self.root = None
-        self.system_message = _SYSTEM_MESSAGE
-        self.base_factor_guidance = _BASE_FACTOR_GUIDANCE
-        self.requirements = _REQUIREMENTS
-        self.libraries = _LIBRARIES
-        self.output_format = _OUTPUT_FORMAT
-        self.effective_analysis = _EFFECTIVE_ANALYSIS
-        self.ineffective_analysis = _INEFFECTIVE_ANALYSIS
-        self.effective_summary = _EFFECTIVE_SUMMARY
-        self.ineffective_summary = _INEFFECTIVE_SUMMARY
-        self.column_description = _COLUMN_DESCRIPTION
-        self.guidance_paraphrase = _GUIDANCE_PARAPHRASE
-
-        self.agents: Dict[str, Tuple[str, str, str]] = dict(_AGENTS)
-        self.quality_templates: Dict[str, str] = dict(_QUALITY)
-        self.evolution_templates: Dict[str, str] = dict(_EVOLUTION)
-        self._generation_templates: Dict[str, str] = dict(_GENERATION_TEMPLATES)
 

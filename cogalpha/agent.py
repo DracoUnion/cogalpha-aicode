@@ -1,7 +1,7 @@
-"""Agent: wraps a prompt library and an LLM client to run factor agents.
+"""Agent: drives the LLM to run factor agents.
 
 A single `Agent` owns the prompt construction (rendering `{placeholder}` tokens
-from the `PromptLibrary` templates) and the `llm.complete` calls for the
+from the `prompt_loader` constants) and the `llm.complete` calls for the
 generation / mutation / crossover agents, plus the quality-prompt builders.
 
 Exposes:
@@ -19,8 +19,16 @@ from typing import List, Optional, Tuple
 
 from . import executor
 from .llm_client import LLMClient
-from .prompt_loader import PromptLibrary
 from .models import FeedbackSummary, ParsedFunction
+from .prompt_loader import (
+    _AGENTS,
+    _EFFECTIVE_ANALYSIS,
+    _EVOLUTION,
+    _GENERATION_TEMPLATES,
+    _INEFFECTIVE_ANALYSIS,
+    _QUALITY,
+    _SYSTEM_MESSAGE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,16 +59,14 @@ def _render_cot_block(template: str, cot: str) -> str:
 
 
 class Agent:
-    """Holds a prompt library + LLM client and performs the factor operations.
+    """Holds an LLM client and performs the factor operations.
 
-    An `Agent` combines prompt construction (via the `PromptLibrary` templates
-    and `_render_placeholders`) with the `llm.complete` calls for the
-    generation / mutation / crossover agents.
+    References the prompt constants from `prompt_loader` directly and calls
+    `llm.complete` for the generation / mutation / crossover agents.
     """
 
-    def __init__(self, llm: LLMClient, lib: PromptLibrary) -> None:
+    def __init__(self, llm: LLMClient) -> None:
         self.llm = llm
-        self.lib = lib
 
     # ------------------------------------------------------------------ #
     # Prompt building
@@ -78,11 +84,11 @@ class Agent:
         """Assemble the full user prompt for one seven-level generation agent.
 
         The per-agent template is a single complete multi-line prompt with
-        `{placeholder}` tokens (see `PromptLibrary._generation_templates`);
-        substitution uses `re.sub`/`.replace` only — no formatting or joining.
+        `{placeholder}` tokens (see `_GENERATION_TEMPLATES`); substitution uses
+        `re.sub`/`.replace` only — no formatting or joining.
         Returns (system_message, user_message).
         """
-        user = self.lib._generation_templates[agent_id]
+        user = _GENERATION_TEMPLATES[agent_id]
         user = _render_placeholders(
             user,
             columns_desc=columns_desc,
@@ -91,19 +97,19 @@ class Agent:
             forecast_horizon=forecast_horizon,
         )
         user = user.replace(
-            "{effective_block}", _render_cot_block(self.lib.effective_analysis, effective_CoT)
+            "{effective_block}", _render_cot_block(_EFFECTIVE_ANALYSIS, effective_CoT)
         ).replace(
-            "{ineffective_block}", _render_cot_block(self.lib.ineffective_analysis, ineffective_CoT)
+            "{ineffective_block}", _render_cot_block(_INEFFECTIVE_ANALYSIS, ineffective_CoT)
         )
-        return self.lib.system_message, user
+        return _SYSTEM_MESSAGE, user
 
     def build_quality_prompt(self, agent_name: str, **kwargs) -> str:
         """Fill one quality-checker template's `{...}` placeholders."""
-        return _render_placeholders(self.lib.quality_templates[agent_name], **kwargs)
+        return _render_placeholders(_QUALITY[agent_name], **kwargs)
 
     def build_evolution_prompt(self, agent_name: str, **kwargs) -> str:
         """Fill one evolution template's `{...}` placeholders."""
-        return _render_placeholders(self.lib.evolution_templates[agent_name], **kwargs)
+        return _render_placeholders(_EVOLUTION[agent_name], **kwargs)
 
     # ------------------------------------------------------------------ #
     # LLM driving (llm.complete)
@@ -168,7 +174,7 @@ class Agent:
             extra_guidance=extra_guidance,
         )
         try:
-            raw = self.llm.complete(self.lib.system_message, user, temperature=temperature)
+            raw = self.llm.complete(_SYSTEM_MESSAGE, user, temperature=temperature)
         except Exception as exc:  # pragma: no cover
             logger.error("mutation call failed: %s", exc)
             return []
@@ -193,7 +199,7 @@ class Agent:
             extra_guidance=extra_guidance,
         )
         try:
-            raw = self.llm.complete(self.lib.system_message, user, temperature=temperature)
+            raw = self.llm.complete(_SYSTEM_MESSAGE, user, temperature=temperature)
         except Exception as exc:  # pragma: no cover
             logger.error("crossover call failed: %s", exc)
             return []
@@ -204,4 +210,4 @@ class Agent:
     # ------------------------------------------------------------------ #
     def list_agents(self) -> List[str]:
         """Sorted ids of the seven-level generation agents."""
-        return sorted(self.lib.agents.keys())
+        return sorted(_AGENTS.keys())

@@ -113,7 +113,7 @@ def run_demo(args: argparse.Namespace) -> None:
     columns_desc = build_column_desc_manual(list(df.columns))
     columns_num = len(df.columns)
 
-    gate = QualityGate(engine.llm, engine.lib, columns_desc, columns_num, cfg)
+    gate = QualityGate(engine.llm, columns_desc, columns_num, cfg, agent=engine.agent)
 
     # Build a tiny parent pool from the deterministic demo factors.
     import re

@@ -17,7 +17,7 @@ src/
     ├── executor.py         # 静态检查（AST 禁嵌套循环）+ 编译执行因子
     ├── evaluator.py        # IC / RankIC / ICIR / RankICIR / MI
     ├── quality.py          # 多智能体质量检查器（质量/修复/评判/逻辑优化）
-    ├── agent.py            # Agent 类（LLMClient + PromptLibrary）：提示词构建 + generate/mutate/crossover
+    ├── agent.py            # Agent 类（LLMClient）：提示词构建 + generate/mutate/crossover
     ├── feedback.py         # 自适应生成反馈（有效/无效因子摘要）
     ├── selection.py        # 池管理 + 合格/精英分类
     └── search.py           # 主进化搜索编排器（CogAlpha 类：面板加载 + 流水线 + 搜索）
@@ -46,9 +46,9 @@ python run.py --data data.parquet --horizon 10 --output ./out --model gpt-4o-min
 
 ## 关键设计
 
-- **提示词组装**：`prompt_loader.PromptLibrary` 从 `prompts/` 目录解析 21 个七级
-  智能体（intro + guidance）与共享模块（requirements / libraries / output_format /
-  system_message / 反馈分析等），按顶层 README 的 8 步顺序组装。
+- **提示词组装**：`prompt_loader` 以模块常量形式内嵌全部提示词（21 个七级智能体的
+  intro + guidance 与共享模块 requirements / libraries / output_format /
+  system_message / 反馈分析等），组装与占位符替换由 `agent.Agent` 完成。
 - **LLM 调用**：生成/进化智能体从 `{0.7,…,1.2}` 均匀抽样温度；质量检查器固定 0.8；
   评判/摘要等返回 JSON 并强制转换为 `pydantic` 模型（`complete_json`）。
 - **质量检查器**：静态 AST 检查（嵌套循环 / `while True` / 语法 / 返回列名）为确定层，
