@@ -14,7 +14,6 @@ A single `Agent` holds the LLM client plus the panel context (`columns_desc` /
 from __future__ import annotations
 
 import logging
-import re
 from typing import List, Optional, Tuple
 
 from . import utils
@@ -33,68 +32,6 @@ from .prompts import (
 
 logger = logging.getLogger(__name__)
 
-MAX_REPAIR_ATTEMPTS_DEFAULT = 3
-
-# [function-N] ... [/function-N] blocks the LLM emits.
-_FUNC_BLOCK = re.compile(r"\[function\-\d+\]([\s\S]*?)\[/function-\d+\]", re.I)
-_DEF = re.compile(r"^\s*def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(df\)\s*:", re.M)
-_DOCSTRING = re.compile(r"\"\"\"(.*?)\"\"\"", re.S)
-
-
-def _render_placeholders(prompt: str, **kw) -> str:
-    """Substitute `{placeholder}` tokens in `prompt` via ``re.sub``.
-
-    Every `{name}` token whose name appears as a keyword is replaced with that
-    value; unknown tokens are left untouched. `None` values render empty and
-    everything else is stringified (so integer placeholders like `{columns_num}`
-    work). This is the single substitution point for every agent prompt.
-    """
-    def _repl(match: re.Match) -> str:
-        name = match.group(1)
-        if name in kw:
-            value = kw[name]
-            return "" if value is None else str(value)
-        return match.group(0)
-
-    return re.sub(r"{(\w+)}", _repl, prompt)
-
-
-def _render_cot_block(template: str, cot: str) -> str:
-    """Render an optional (``---``-prefixed) CoT analysis block, or '' if empty."""
-    if not cot:
-        return ""
-    return template.replace("{effective_CoT}", cot).replace("{ineffective_CoT}", cot)
-
-
-def _quality_issues(raw: str) -> List[str]:
-    """Extract the bulleted issue list from a code-quality review."""
-    issues = []
-    for l in raw.splitlines():
-        s = l.strip()
-        if s.startswith("-") or s.startswith("*") or s.startswith("1."):
-            issues.append(s.lstrip("-*0123456789. ").strip())
-            if len(issues) >= 8:
-                break
-    return issues
-
-
-def _quality_corrected(raw: str) -> str:
-    funcs = Agent.parse_generated_code(raw)
-    return funcs[0].code if funcs else ""
-
-
-def _guess_name(block: str) -> str:
-    m = re.search(r"return\s+df_copy\[['\"]([^'\"]+)['\"]\]", block)
-    if m:
-        return m.group(1)
-    m = re.search(r"[A-Za-z_][A-Za-z0-9_]*\(", block)
-    return m.group(0).rstrip("(") if m else "factor_unknown"
-
-
-def _extract_docstring(code: str) -> str:
-    m = _DOCSTRING.search(code)
-    return m.group(1).strip() if m else ""
-
 
 class Agent:
     """Holds the LLM client and performs prompt build, factor ops, and quality."""
@@ -110,7 +47,7 @@ class Agent:
         self.cfg = cfg
         self.columns_desc = columns_desc
         self.columns_num = columns_num
-        self.max_repair = cfg.generation.max_repair_attempts or MAX_REPAIR_ATTEMPTS_DEFAULT
+        self.max_repair = cfg.generation.max_repair_attempts or utils.MAX_REPAIR_ATTEMPTS_DEFAULT
 
     # ------------------------------------------------------------------ #
     # Prompt building
@@ -133,7 +70,7 @@ class Agent:
         Returns (system_message, user_message).
         """
         user = _GENERATION_TEMPLATES[agent_id]
-        user = _render_placeholders(
+        user = utils.render_placeholders(
             user,
             columns_desc=columns_desc,
             columns_num=columns_num,
@@ -141,19 +78,19 @@ class Agent:
             forecast_horizon=forecast_horizon,
         )
         user = user.replace(
-            "{effective_block}", _render_cot_block(_EFFECTIVE_ANALYSIS, effective_CoT)
+            "{effective_block}", utils.render_cot_block(_EFFECTIVE_ANALYSIS, effective_CoT)
         ).replace(
-            "{ineffective_block}", _render_cot_block(_INEFFECTIVE_ANALYSIS, ineffective_CoT)
+            "{ineffective_block}", utils.render_cot_block(_INEFFECTIVE_ANALYSIS, ineffective_CoT)
         )
         return _SYSTEM_MESSAGE, user
 
     def build_quality_prompt(self, agent_name: str, **kwargs) -> str:
         """Fill one quality-checker template's `{...}` placeholders."""
-        return _render_placeholders(_QUALITY[agent_name], **kwargs)
+        return utils.render_placeholders(_QUALITY[agent_name], **kwargs)
 
     def build_evolution_prompt(self, agent_name: str, **kwargs) -> str:
         """Fill one evolution template's `{...}` placeholders."""
-        return _render_placeholders(_EVOLUTION[agent_name], **kwargs)
+        return utils.render_placeholders(_EVOLUTION[agent_name], **kwargs)
 
     # ------------------------------------------------------------------ #
     # LLM driving (llm.complete)
@@ -271,8 +208,8 @@ class Agent:
         except Exception as exc:  # pragma: no cover - API dependent
             logger.warning("code_quality LLM call failed: %s", exc)
             return QualityResult(status="correct")
-        issues = _quality_issues(raw)
-        corrected = _quality_corrected(raw)
+        issues = utils.quality_issues(raw)
+        corrected = utils.quality_corrected(raw)
         status = "needs adjustments" if issues else "correct"
         return QualityResult(status=status, issues=issues, corrected_code=corrected)
 
@@ -377,18 +314,7 @@ class Agent:
     @staticmethod
     def parse_generated_code(raw: str) -> List[ParsedFunction]:
         """Extract `[function-N]` blocks from a generation response."""
-        out: List[ParsedFunction] = []
-        seen = set()
-        for match in _FUNC_BLOCK.finditer(raw):
-            block = match.group(1).strip()
-            dm = _DEF.search(block)
-            name = dm.group(1) if dm else _guess_name(block)
-            if not name or name in seen:
-                continue
-            seen.add(name)
-            doc = _extract_docstring(block)
-            out.append(ParsedFunction(name=name, code=block, docstring=doc))
-        return out
+        return utils.parse_generated_code(raw)
 
     def describe_columns(self, df) -> str:
         """Turn the panel's column names into a `columns_desc` block.
