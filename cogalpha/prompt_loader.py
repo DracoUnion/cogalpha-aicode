@@ -16,15 +16,14 @@ unchanged:
     generation agents
   - `quality_templates` / `evolution_templates`: full user prompts for the
     quality-checker and thinking-evolution agents
-  - methods: build_generation_prompt / build_quality_prompt / build_evolution_prompt
 
 A `prompts_dir` argument is accepted for backward compatibility but ignored —
-the templates live in this module.
+the templates live in this module. Prompt assembly and the LLM calls live in
+`agent.Agent`, which consumes these templates.
 """
 
 from __future__ import annotations
 
-import re
 from typing import Dict, Optional, Tuple
 
 # --------------------------------------------------------------------------- #
@@ -1431,7 +1430,7 @@ _GENERATION_LAYOUT = """{intro_block}
 # Each generation agent's user prompt is the layout above with the shared,
 # unchanged blocks slotted in once at module load (via `.replace`, never
 # concatenated). What remains are the runtime `{...}` placeholders that
-# `PromptLibrary.build_generation_prompt` substitutes at call time — so every
+# `agent.Agent.build_generation_prompt` substitutes at call time — so every
 # prompt is a single complete multi-line string with placeholder tokens.
 _GENERATION_TEMPLATES: Dict[str, str] = {
     agent_id: (
@@ -1443,42 +1442,6 @@ _GENERATION_TEMPLATES: Dict[str, str] = {
     )
     for agent_id, (_level, intro, guidance) in _AGENTS.items()
 }
-
-# Maps a builder keyword argument to the `{placeholder}` token written in a prompt.
-_TOKEN_ALIASES: Dict[str, str] = {
-    "columns_desc": "{columns_desc}",
-    "columns_num": "{columns_num}",
-    "num_per_request": "{num_per_request}",
-    "forecast_horizon": "{forecast_horizon}",
-    "effective_CoT": "{effective_CoT}",
-    "ineffective_CoT": "{ineffective_CoT}",
-    "code": "{code}",
-    "old_code": "{old_code}",
-    "error": "{error}",
-    "new_factor_code": "{new_factor_code}",
-    "dynamic_feedback": "{dynamic_feedback}",
-    "intro": "{intro}",
-    "original_factor_code": "{original_factor_code}",
-    "extra_guidance": "{extra_guidance}",
-    "parent_factor_1_code": "{parent_factor_1_code}",
-    "parent_factor_2_code": "{parent_factor_2_code}",
-}
-
-
-def _render_placeholders(prompt: str, aliases: Dict[str, str], **kw) -> str:
-    """Substitute `{placeholder}` tokens in `text` using `.replace()`.
-
-    None/missing values render as an empty string; a keyword without a known
-    token raises, so typo'd call sites fail loudly.
-    """
-    return re.sub(r"{(\w+)}", lambda g: kw.get(g.group(1), g.group(0)), prompt)
-
-
-def _render_cot_block(template: str, cot: str) -> str:
-    """Render an optional (``---``-prefixed) CoT analysis block, or '' if empty."""
-    if not cot:
-        return ""
-    return template.replace("{effective_CoT}", cot).replace("{ineffective_CoT}", cot)
 
 
 # --------------------------------------------------------------------------- #
@@ -1506,48 +1469,4 @@ class PromptLibrary:
         self.quality_templates: Dict[str, str] = dict(_QUALITY)
         self.evolution_templates: Dict[str, str] = dict(_EVOLUTION)
         self._generation_templates: Dict[str, str] = dict(_GENERATION_TEMPLATES)
-
-    # ------------------------------------------------------------------ #
-    # Assembly (placeholders are substituted with str.replace, never .format)
-    # ------------------------------------------------------------------ #
-    def build_generation_prompt(
-        self,
-        agent_id: str,
-        columns_desc: str,
-        columns_num: int,
-        num_per_request: int,
-        forecast_horizon: int,
-        effective_CoT: str = "",
-        ineffective_CoT: str = "",
-    ) -> Tuple[str, str]:
-        """Assemble a full generation prompt for one seven-level agent.
-
-        The per-agent template is a single complete multi-line prompt with
-        `{placeholder}` tokens (see `_GENERATION_TEMPLATES`); this method
-        only substitutes them via `.replace()` — no formatting or joining.
-        Returns (system_message, user_message).
-        """
-        user = self._generation_templates[agent_id]
-        user = _render_placeholders(
-            user,
-            _TOKEN_ALIASES,
-            columns_desc=columns_desc,
-            columns_num=columns_num,
-            num_per_request=num_per_request,
-            forecast_horizon=forecast_horizon,
-        )
-        user = user.replace(
-            "{effective_block}", _render_cot_block(self.effective_analysis, effective_CoT)
-        ).replace(
-            "{ineffective_block}", _render_cot_block(self.ineffective_analysis, ineffective_CoT)
-        )
-        return self.system_message, user
-
-    def build_quality_prompt(self, agent_id: str, **kwargs) -> str:
-        """Fill one quality-checker template's `{...}` placeholders."""
-        return _render_placeholders(self.quality_templates[agent_id], _TOKEN_ALIASES, **kwargs)
-
-    def build_evolution_prompt(self, agent_id: str, **kwargs) -> str:
-        """Fill one evolution template's `{...}` placeholders."""
-        return _render_placeholders(self.evolution_templates[agent_id], _TOKEN_ALIASES, **kwargs)
 

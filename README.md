@@ -13,16 +13,14 @@ src/
     ├── models.py           # 所有 dataclass 与 pydantic 模型（LLM/进化配置、Factor、质检输出、SearchResult）
     ├── llm_client.py       # OpenAI 兼容客户端封装（chat + JSON 结构化输出）
     ├── prompt_loader.py    # 从 prompts/ 解析并组装提示词
-    ├── data_loader.py      # 载入 OHLCV 面板、列描述
+    ├── data_loader.py      # 列描述助手（面板加载见 CogAlpha._load）
     ├── executor.py         # 静态检查（AST 禁嵌套循环）+ 编译执行因子
     ├── evaluator.py        # IC / RankIC / ICIR / RankICIR / MI
     ├── quality.py          # 多智能体质量检查器（质量/修复/评判/逻辑优化）
-    ├── generation.py       # 七级生成智能体（21 个）
-    ├── evolution.py        # 思维进化（变异 / 交叉）
+    ├── agent.py            # Agent 类（LLMClient + PromptLibrary）：提示词构建 + generate/mutate/crossover
     ├── feedback.py         # 自适应生成反馈（有效/无效因子摘要）
     ├── selection.py        # 池管理 + 合格/精英分类
-    ├── pipeline.py         # 生成→质检→执行→评估→分类 单因子流水线
-    └── search.py           # 主进化搜索编排器（CogAlpha 类）
+    └── search.py           # 主进化搜索编排器（CogAlpha 类：面板加载 + 流水线 + 搜索）
 ```
 
 ## 运行

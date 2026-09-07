@@ -18,6 +18,7 @@ import logging
 from typing import List, Optional
 
 from . import executor
+from .agent import Agent
 from .models import CogAlphaConfig
 from .llm_client import LLMClient
 from .prompt_loader import PromptLibrary
@@ -38,9 +39,11 @@ class QualityGate:
         columns_desc: str,
         columns_num: int,
         cfg: CogAlphaConfig,
+        agent: Optional[Agent] = None,
     ) -> None:
         self.llm = llm
         self.lib = lib
+        self.agent = agent or Agent(llm, lib)
         self.columns_desc = columns_desc
         self.columns_num = columns_num
         self.cfg = cfg
@@ -59,7 +62,7 @@ class QualityGate:
     # ------------------------------------------------------------------ #
     def judge(self, code: str) -> JudgeResult:
         """Judge Agent: decide Accept/Reject + improvement feedback."""
-        prompt = self.lib.build_quality_prompt(
+        prompt = self.agent.build_quality_prompt(
             "judge_agent", new_factor_code=code
         )
         return self.llm.complete_json(
@@ -68,7 +71,7 @@ class QualityGate:
 
     def code_quality(self, code: str) -> QualityResult:
         """Code Quality Agent: LLM review that complements static checks."""
-        prompt = self.lib.build_quality_prompt("code_quality_agent", code=code)
+        prompt = self.agent.build_quality_prompt("code_quality_agent", code=code)
         try:
             raw = self.llm.complete_quality(self.lib.system_message, prompt)
         except Exception as exc:  # pragma: no cover - API dependent
@@ -81,7 +84,7 @@ class QualityGate:
 
     def repair(self, old_code: str, error: str) -> str:
         """Code Repair Agent: fix an execution/static failure."""
-        prompt = self.lib.build_quality_prompt(
+        prompt = self.agent.build_quality_prompt(
             "code_repair_agent",
             columns_num=self.columns_num,
             columns_desc=self.columns_desc,
@@ -94,7 +97,7 @@ class QualityGate:
 
     def logic_improve(self, old_code: str, feedback: str) -> str:
         """Logic Improvement Agent: improve a rejected factor."""
-        prompt = self.lib.build_quality_prompt(
+        prompt = self.agent.build_quality_prompt(
             "logic_improvement_agent",
             columns_num=self.columns_num,
             columns_desc=self.columns_desc,

@@ -24,9 +24,9 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
-from . import evolution as evolution_agents
 from . import feedback as feedback_mod
-from . import executor, evaluator, generation, selection
+from . import executor, evaluator, selection
+from .agent import Agent
 from .models import CogAlphaConfig
 from .data_loader import build_column_desc_manual, describe_columns
 from .llm_client import LLMClient
@@ -44,6 +44,7 @@ class CogAlpha:
         self.cfg = cfg
         self.lib = PromptLibrary(cfg.prompts_dir)
         self.llm = LLMClient(cfg)
+        self.agent = Agent(self.llm, self.lib)
         self._logger = logger
 
     # ------------------------------------------------------------------ #
@@ -173,9 +174,9 @@ class CogAlpha:
         columns_desc = self._describe(df)
         columns_num = len(df.columns)
 
-        gate = QualityGate(self.llm, self.lib, columns_desc, columns_num, self.cfg)
+        gate = QualityGate(self.llm, self.lib, columns_desc, columns_num, self.cfg, agent=self.agent)
         gen = self.cfg.generation
-        agent_ids = generation.list_agents(self.lib)
+        agent_ids = self.agent.list_agents()
 
         result = SearchResult()
 
@@ -186,8 +187,8 @@ class CogAlpha:
             attempts += 1
             agent_id = random.choice(agent_ids)
             level, _, _ = self.lib.agents[agent_id]
-            pfs = generation.generate_code(
-                self.llm, self.lib, agent_id, columns_desc, columns_num,
+            pfs = self.agent.generate_code(
+                agent_id, columns_desc, columns_num,
                 gen.num_per_request, self.cfg.forecast_horizon, None,
             )
             for pf in pfs:
@@ -294,24 +295,24 @@ class CogAlpha:
             candidates: List = []
 
             if op == "generate":
-                pfs = generation.generate_code(
-                    self.llm, self.lib, agent_id, columns_desc, columns_num,
+                pfs = self.agent.generate_code(
+                    agent_id, columns_desc, columns_num,
                     num_per, horizon, feedback,
                 )
                 candidates = [(pf, "generated") for pf in pfs]
 
             elif op == "mutation" and pool:
                 parent = random.choice(pool[: max(1, len(pool) // 2)])
-                pfs = evolution_agents.mutate(
-                    self.llm, self.lib, columns_desc, columns_num, num_per, horizon,
+                pfs = self.agent.mutate(
+                    columns_desc, columns_num, num_per, horizon,
                     parent.code, extra_guidance=feedback.effective,
                 )
                 candidates = [(pf, "mutation") for pf in pfs]
 
             elif op in ("crossover", "crossover_then_mutation") and len(pool) >= 2:
                 p1, p2 = random.sample(pool[: max(2, len(pool) // 2)], 2)
-                pfs = evolution_agents.crossover(
-                    self.llm, self.lib, columns_desc, columns_num, num_per, horizon,
+                pfs = self.agent.crossover(
+                    columns_desc, columns_num, num_per, horizon,
                     p1.code, p2.code, extra_guidance=feedback.effective,
                 )
                 candidates = [(pf, "crossover") for pf in pfs]
