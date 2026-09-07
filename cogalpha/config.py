@@ -10,7 +10,12 @@ from typing import Dict, List, Optional, Tuple
 
 from pydantic import AliasChoices, BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s][%(name)s][%(levelname)s] %(message)s'
+)
 
 class LLMSettings(BaseSettings):
     """OpenAI-compatible endpoint settings.
