@@ -22,6 +22,7 @@ from .llm_client import LLMClient
 from .models import CogAlphaConfig, FeedbackSummary, JudgeResult, ParsedFunction, QualityResult
 from .prompt_loader import (
     _AGENTS,
+    _COLUMN_DESCRIPTION,
     _EFFECTIVE_ANALYSIS,
     _EVOLUTION,
     _GENERATION_TEMPLATES,
@@ -355,6 +356,39 @@ class Agent:
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
+    def describe_columns(self, df) -> str:
+        """Turn the panel's column names into a `columns_desc` block.
+
+        Uses the `_COLUMN_DESCRIPTION` helper prompt through `llm.complete_quality`
+        (only when `self.cfg.use_llm` is on); on any failure it falls back to a
+        plain list of the available columns.
+        """
+        factor_cols = [c for c in df.columns if c.lower() not in {"label", "y", "target", "ret_fwd"}]
+        if not factor_cols:
+            raise ValueError("The panel has no factor columns to describe.")
+
+        if not self.cfg.use_llm:
+            return "\n".join(f"- {c}" for c in factor_cols)
+
+        prompt = _COLUMN_DESCRIPTION.replace("{factor_names}", ", ".join(factor_cols))
+        try:
+            raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
+        except Exception as exc:  # pragma: no cover - network/API dependent
+            logger.warning("column_description LLM call failed (%s); using plain names", exc)
+            return "\n".join(f"- {c}" for c in factor_cols)
+
+        lines = []
+        for line in raw.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if ":" in line:
+                col, desc = line.split(":", 1)
+                lines.append(f"- `{col.strip()}`: {desc.strip()}")
+            else:
+                lines.append(f"- {line}")
+        return "\n".join(lines) or "\n".join(f"- {c}" for c in factor_cols)
+
     def list_agents(self) -> List[str]:
         """Sorted ids of the seven-level generation agents."""
         return sorted(_AGENTS.keys())

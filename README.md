@@ -13,7 +13,7 @@ src/
     ├── models.py           # 所有 dataclass 与 pydantic 模型（LLM/进化配置、Factor、质检输出、SearchResult）
     ├── llm_client.py       # OpenAI 兼容客户端封装（chat + JSON 结构化输出）
     ├── prompt_loader.py    # 从 prompts/ 解析并组装提示词
-    ├── data_loader.py      # 列描述助手（面板加载见 CogAlpha._load）
+    ├── data_loader.py      # 列描述手动回退 helper（LLM 版见 agent.describe_columns）
     ├── executor.py         # 静态检查（AST 禁嵌套循环）+ 编译执行因子
     ├── evaluator.py        # IC / RankIC / ICIR / RankICIR / MI
     ├── agent.py            # Agent 类（LLMClient）：提示词构建 + generate/mutate/crossover + 质量检查（原 QualityGate）

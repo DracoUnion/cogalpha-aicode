@@ -28,7 +28,7 @@ from . import feedback as feedback_mod
 from . import executor, evaluator, selection
 from .agent import Agent
 from .models import CogAlphaConfig
-from .data_loader import build_column_desc_manual, describe_columns
+from .data_loader import build_column_desc_manual
 from .llm_client import LLMClient
 from .prompt_loader import _AGENTS
 from .models import Factor, FeedbackSummary, ParsedFunction, SearchResult
@@ -81,11 +81,10 @@ class CogAlpha:
         return df.sort_index()
 
     def _describe(self, df: pd.DataFrame) -> str:
-        if self.cfg.llm.api_key or True:
-            try:
-                return describe_columns(df, self.llm)
-            except Exception as exc:  # pragma: no cover - API dependent
-                self._logger.warning("column_description failed: %s; using manual block", exc)
+        try:
+            return self.agent.describe_columns(df)
+        except Exception as exc:  # pragma: no cover - API dependent
+            self._logger.warning("column_description failed: %s; using manual block", exc)
         return build_column_desc_manual(list(df.columns))
 
     # ------------------------------------------------------------------ #
