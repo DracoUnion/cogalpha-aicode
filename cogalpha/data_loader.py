@@ -75,9 +75,7 @@ def describe_columns(
     if llm is None or lib is None:
         return "\n".join(f"- {c}" for c in factor_cols)
 
-    prompt = lib.column_description.replace(
-        "{', '.join(factor_names)}", "', '".join(factor_cols)
-    )
+    prompt = lib.column_description.replace("{factor_names}", ", ".join(factor_cols))
     try:
         raw = llm.complete_quality(lib.system_message, prompt)
     except Exception as exc:  # pragma: no cover - network/API dependent

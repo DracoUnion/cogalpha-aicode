@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import random
+import textwrap
 from typing import List
 
 from .llm_client import LLMClient
@@ -28,7 +29,7 @@ def _render_examples(factors: List[Factor]) -> str:
         lines.append(f"Metrics: IC / RankIC / ICIR / RankICIR")
         lines.append("Code:")
         lines.append(f"<<function {i}>>")
-        lines.append(f.indent(f.code, "    ") if f.code else "")
+        lines.append(textwrap.indent(f.code, "    ") if f.code else "")
         lines.append(f"<</function {i}>>")
         lines.append(f"<</factor {i}>>")
     return "\n".join(lines)
@@ -47,11 +48,9 @@ def build_feedback(
         size = min(len(effective), 6)
         sample = random.sample(effective, size)
         names = ", ".join(f.name for f in sample)
-        user = lib.effective_summary.replace(
-            "{', '.join(random.sample(factors_content, min(6, len(factors_content))))}",
-            names,
+        user = lib.effective_summary.replace("{factor_names}", names).replace(
+            "{factor_examples}", _render_examples(sample)
         )
-        user = user + "\n\n" + _render_examples(sample)
         try:
             effective_CoT = llm.complete_quality(lib.system_message, user)
         except Exception as exc:  # pragma: no cover - network/API dependent
@@ -62,10 +61,9 @@ def build_feedback(
         size = min(len(ineffective), 8)
         sample = random.sample(ineffective, size)
         names = ", ".join(f.name for f in sample)
-        user = lib.ineffective_summary.replace(
-            "{', '.join(random.sample(factors_content, min(8, len(factors_content))))}",
-            names,
-        ) + "\n\n" + _render_examples(sample)
+        user = lib.ineffective_summary.replace("{factor_names}", names).replace(
+            "{factor_examples}", _render_examples(sample)
+        )
         try:
             ineffective_CoT = llm.complete_quality(lib.system_message, user)
         except Exception as exc:  # pragma: no cover - network/API dependent

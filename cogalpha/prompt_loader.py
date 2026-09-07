@@ -1,6 +1,10 @@
 """Prompt templates for CogAlpha, embedded directly (no external files).
 
 All prompts from `prompts/` are inlined here so the package is self-contained.
+Every prompt is a plain multi-line string whose dynamic parts are written as
+`{placeholder}` tokens — nothing is assembled at call time and nothing uses
+`str.format`. Substitution happens with `.replace(token, value)`.
+
 The public surface mirrors the original loader so downstream modules are
 unchanged:
 
@@ -105,9 +109,10 @@ IMPORTANT: Do not modify the factor names in any way. Use the exact same name as
 Return your answer in the format:
 <exact_factor_name>: <description>
 
-{', '.join(factor_names)}"""
+{factor_names}"""
 
-_EFFECTIVE_ANALYSIS = """### Analysis of Effective Factors and Innovation Directions:
+_EFFECTIVE_ANALYSIS = """---
+### Analysis of Effective Factors and Innovation Directions:
 Below is a condensed CoT-style summary built from recent successful cases and why they work well.
 Mini-Chain from Survivors  (Observation → Cause → Fix):
 {effective_CoT}
@@ -115,7 +120,8 @@ Mini-Chain from Survivors  (Observation → Cause → Fix):
 Based on these strengths, use them as heuristic inspiration to guide new factor creation, rather than copying the original principles.
 Seek innovative methods to generate more efficient, robust, and adaptable factors, ensuring they work well in diverse market conditions while avoiding look-ahead/leakage and redundancy."""
 
-_INEFFECTIVE_ANALYSIS = """### Analysis of Ineffective Factors and Innovation Directions
+_INEFFECTIVE_ANALYSIS = """---
+### Analysis of Ineffective Factors and Innovation Directions
 Below is a condensed CoT-style summary built from recent failure cases and why they fail.
 Mini-Chain from Failures (Observation → Cause → Fix):
 {ineffective_CoT}
@@ -148,7 +154,9 @@ _EFFECTIVE_SUMMARY = """You are given several factor functions in the format:
                 **Short Formula**: `<one-line formula>`
                 **Efficiency Analysis**: <analysis>
 
-{', '.join(random.sample(factors_content, min(6, len(factors_content))))}"""
+{factor_names}
+
+{factor_examples}"""
 
 _INEFFECTIVE_SUMMARY = """You are given several factor functions in the format:
             <<factor N>>
@@ -175,7 +183,9 @@ _INEFFECTIVE_SUMMARY = """You are given several factor functions in the format:
                 **Short Formula**: `<one-line formula>`
                 **Failure Analysis**: <analysis>
 
-{', '.join(random.sample(factors_content, min(8, len(factors_content))))}"""
+{factor_names}
+
+{factor_examples}"""
 
 _GUIDANCE_PARAPHRASE = """You are an expert prompt rewriter for quantitative-AI research agents.
 
@@ -1391,6 +1401,82 @@ def factor_xyz(df):
 }
 
 
+_GENERATION_LAYOUT = """{intro_block}
+
+{effective_block}
+
+{ineffective_block}
+
+---
+{requirements_block}
+
+---
+{guidance_block}
+
+---
+{libraries_block}
+
+---
+{output_format_block}"""
+
+# Each generation agent's user prompt is the layout above with the shared,
+# unchanged blocks slotted in once at module load (via `.replace`, never
+# concatenated). What remains are the runtime `{...}` placeholders that
+# `PromptLibrary.build_generation_prompt` substitutes at call time — so every
+# prompt is a single complete multi-line string with placeholder tokens.
+_GENERATION_TEMPLATES: Dict[str, str] = {
+    agent_id: (
+        _GENERATION_LAYOUT.replace("{intro_block}", intro)
+        .replace("{guidance_block}", guidance)
+        .replace("{requirements_block}", _REQUIREMENTS)
+        .replace("{libraries_block}", _LIBRARIES)
+        .replace("{output_format_block}", _OUTPUT_FORMAT)
+    )
+    for agent_id, (_level, intro, guidance) in _AGENTS.items()
+}
+
+# Maps a builder keyword argument to the `{placeholder}` token written in a prompt.
+_TOKEN_ALIASES: Dict[str, str] = {
+    "columns_desc": "{columns_desc}",
+    "columns_num": "{columns_num}",
+    "num_per_request": "{num_per_request}",
+    "forecast_horizon": "{forecast_horizon}",
+    "effective_CoT": "{effective_CoT}",
+    "ineffective_CoT": "{ineffective_CoT}",
+    "code": "{code}",
+    "old_code": "{old_code}",
+    "error": "{error}",
+    "new_factor_code": "{new_factor_code}",
+    "dynamic_feedback": "{dynamic_feedback}",
+    "intro": "{intro}",
+    "original_factor_code": "{original_factor_code}",
+    "extra_guidance": "{extra_guidance}",
+    "parent_factor_1_code": "{parent_factor_1_code}",
+    "parent_factor_2_code": "{parent_factor_2_code}",
+}
+
+
+def _render_placeholders(text: str, aliases: Dict[str, str], **values) -> str:
+    """Substitute `{placeholder}` tokens in `text` using `.replace()`.
+
+    None/missing values render as an empty string; a keyword without a known
+    token raises, so typo'd call sites fail loudly.
+    """
+    for key, value in values.items():
+        token = aliases.get(key)
+        if token is None:
+            raise KeyError(f"Unsupported placeholder {key!r}")
+        text = text.replace(token, "" if value is None else str(value))
+    return text
+
+
+def _render_cot_block(template: str, cot: str) -> str:
+    """Render an optional (``---``-prefixed) CoT analysis block, or '' if empty."""
+    if not cot:
+        return ""
+    return template.replace("{effective_CoT}", cot).replace("{ineffective_CoT}", cot)
+
+
 # --------------------------------------------------------------------------- #
 # Public loader
 # --------------------------------------------------------------------------- #
@@ -1415,9 +1501,10 @@ class PromptLibrary:
         self.agents: Dict[str, Tuple[str, str, str]] = dict(_AGENTS)
         self.quality_templates: Dict[str, str] = dict(_QUALITY)
         self.evolution_templates: Dict[str, str] = dict(_EVOLUTION)
+        self._generation_templates: Dict[str, str] = dict(_GENERATION_TEMPLATES)
 
     # ------------------------------------------------------------------ #
-    # Assembly
+    # Assembly (placeholders are substituted with str.replace, never .format)
     # ------------------------------------------------------------------ #
     def build_generation_prompt(
         self,
@@ -1431,32 +1518,31 @@ class PromptLibrary:
     ) -> Tuple[str, str]:
         """Assemble a full generation prompt for one seven-level agent.
 
+        The per-agent template is a single complete multi-line prompt with
+        `{placeholder}` tokens (see `_GENERATION_TEMPLATES`); this method
+        only substitutes them via `.replace()` — no formatting or joining.
         Returns (system_message, user_message).
         """
-        level, intro, guidance = self.agents[agent_id]
-        user_blocks = [
-            intro.format(
-                columns_desc=columns_desc,
-                columns_num=columns_num,
-                num_per_request=num_per_request,
-                forecast_horizon=forecast_horizon,
-            )
-        ]
-        if effective_CoT:
-            user_blocks.append(self.effective_analysis.format(effective_CoT=effective_CoT))
-        if ineffective_CoT:
-            user_blocks.append(self.ineffective_analysis.format(ineffective_CoT=ineffective_CoT))
-        user_blocks.append(self.requirements)
-        user_blocks.append(guidance)
-        user_blocks.append(self.libraries)
-        user_blocks.append(self.output_format)
-
-        return self.system_message, "\n---\n".join(user_blocks)
+        user = self._generation_templates[agent_id]
+        user = _render_placeholders(
+            user,
+            _TOKEN_ALIASES,
+            columns_desc=columns_desc,
+            columns_num=columns_num,
+            num_per_request=num_per_request,
+            forecast_horizon=forecast_horizon,
+        )
+        user = user.replace(
+            "{effective_block}", _render_cot_block(self.effective_analysis, effective_CoT)
+        ).replace(
+            "{ineffective_block}", _render_cot_block(self.ineffective_analysis, ineffective_CoT)
+        )
+        return self.system_message, user
 
     def build_quality_prompt(self, agent_id: str, **kwargs) -> str:
-        """Fill one quality-checker template's placeholders."""
-        return self.quality_templates[agent_id].format(**kwargs)
+        """Fill one quality-checker template's `{...}` placeholders."""
+        return _render_placeholders(self.quality_templates[agent_id], _TOKEN_ALIASES, **kwargs)
 
     def build_evolution_prompt(self, agent_id: str, **kwargs) -> str:
-        """Fill one evolution template's placeholders."""
-        return self.evolution_templates[agent_id].format(**kwargs)
+        """Fill one evolution template's `{...}` placeholders."""
+        return _render_placeholders(self.evolution_templates[agent_id], _TOKEN_ALIASES, **kwargs)
