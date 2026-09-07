@@ -15,10 +15,10 @@ src/
     ├── prompt_loader.py    # 从 prompts/ 解析并组装提示词
     ├── data_loader.py      # 列描述手动回退 helper（LLM 版见 agent.describe_columns）
     ├── executor.py         # 静态检查（AST 禁嵌套循环）+ 编译执行因子
-    ├── evaluator.py        # IC / RankIC / ICIR / RankICIR / MI
+    ├── evaluator.py        # 标签 forward_returns + NaN 比例（IC/RankIC/ICIR/MI 见 CogAlpha.evaluate_factor）
     ├── agent.py            # Agent 类（LLMClient）：提示词构建 + generate/mutate/crossover + 质量检查（原 QualityGate）
     ├── feedback.py         # 自适应生成反馈（有效/无效因子摘要）
-    ├── selection.py        # 池管理 + 合格/精英分类
+    ├── selection.py        # 池排序 rank_factors（合格/精英分类见 CogAlpha.classify_factor）
     └── search.py           # 主进化搜索编排器（CogAlpha 类：面板加载 + 流水线 + 搜索）
 ```
 
