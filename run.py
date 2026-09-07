@@ -26,7 +26,6 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from cogalpha.models import CogAlphaConfig  # noqa: E402
-from cogalpha.llm_client import LLMClient  # noqa: E402
 from cogalpha.search import CogAlpha  # noqa: E402
 
 
@@ -97,10 +96,8 @@ def synthetic_panel(days: int = 600, tickers: int = 40, seed: int = 0) -> pd.Dat
 
 def run_demo(args: argparse.Namespace) -> None:
     """Offline end-to-end exercise using a stub LLM and synthetic data."""
-    from cogalpha import pipeline
     from cogalpha import selection
     from cogalpha.data_loader import build_column_desc_manual
-    from cogalpha.prompt_loader import PromptLibrary
     from cogalpha.quality import QualityGate
     from cogalpha.models import ParsedFunction
 
@@ -111,13 +108,12 @@ def run_demo(args: argparse.Namespace) -> None:
 
     print("== CogAlpha demo (offline) ==")
     df = synthetic_panel()
-    label = pipeline.compute_label(df, cfg.forecast_horizon)
+    engine = CogAlpha(cfg)  # no API calls made (cfg.use_llm is False)
+    label = engine.compute_label(df, cfg.forecast_horizon)
     columns_desc = build_column_desc_manual(list(df.columns))
     columns_num = len(df.columns)
 
-    lib = PromptLibrary(cfg.prompts_dir)
-    llm = LLMClient(cfg)  # not used for the static path below
-    gate = QualityGate(llm, lib, columns_desc, columns_num, cfg)
+    gate = QualityGate(engine.llm, engine.lib, columns_desc, columns_num, cfg)
 
     # Build a tiny parent pool from the deterministic demo factors.
     import re
@@ -126,8 +122,8 @@ def run_demo(args: argparse.Namespace) -> None:
         m = re.search(r"def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", code)
         name = m.group(1) if m else "factor_demo"
         pf = ParsedFunction(name=name, code=code)
-        f = pipeline.produce_factor(
-            pf, gate, df, label, cfg, theme="demo", level="demo",
+        f = engine.produce_factor(
+            pf, gate, df, label, theme="demo", level="demo",
             agent_id="demo", generation=0, source="generated",
         )
         if f is not None:

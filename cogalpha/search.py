@@ -26,13 +26,13 @@ import pandas as pd
 
 from . import evolution as evolution_agents
 from . import feedback as feedback_mod
-from . import generation, pipeline, selection
+from . import executor, evaluator, generation, selection
 from .models import CogAlphaConfig
 from .data_loader import build_column_desc_manual, describe_columns
 from .llm_client import LLMClient
 from .prompt_loader import PromptLibrary
 from .quality import QualityGate
-from .models import Factor, FeedbackSummary, SearchResult
+from .models import Factor, FeedbackSummary, ParsedFunction, SearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -90,12 +90,86 @@ class CogAlpha:
         return build_column_desc_manual(list(df.columns))
 
     # ------------------------------------------------------------------ #
+    # Pipeline (gate -> execute -> evaluate -> classify)
+    # ------------------------------------------------------------------ #
+    def compute_label(self, data: pd.DataFrame, horizon: int, price_col: str = "open") -> pd.Series:
+        """Forward-return labels used as the fitness target."""
+        return evaluator.forward_returns(data, horizon, price_col)
+
+    def produce_factor(
+        self,
+        pf: ParsedFunction,
+        gate: QualityGate,
+        data: pd.DataFrame,
+        label: pd.Series,
+        *,
+        theme: str = "",
+        level: str = "",
+        agent_id: str = "",
+        generation: int = 0,
+        source: str = "generated",
+    ) -> Optional[Factor]:
+        """Run the quality gate, execute, and evaluate a parsed function."""
+        factor = Factor(
+            name=pf.name,
+            code=pf.code,
+            docstring=pf.docstring,
+            theme=theme,
+            level=level,
+            agent_id=agent_id,
+            generation=generation,
+            source=source,
+        )
+
+        # 1) Quality checker (repair + judge + logic improvement).
+        final_code = self._run_gate(gate, factor)
+        if final_code is None:
+            return None
+        factor.code = final_code
+
+        # 2) Execute.
+        series = self._execute(factor, data)
+        if series is None:
+            factor.executable = False
+            factor.accepted_by_judge = False
+            return None
+        factor.executable = True
+        factor.nan_ratio = evaluator.nan_ratio(series)
+        if factor.nan_ratio > self.cfg.generation.max_nan_ratio:
+            logger.debug("Factor %s NaN ratio %.2f too high; dropping.", factor.name, factor.nan_ratio)
+            return None
+
+        # 3) Evaluate.
+        metrics = evaluator.evaluate_factor(series, label)
+        factor.set_metrics(metrics)
+        factor = selection.classify_factor(factor, self.cfg.evaluation)
+        return factor
+
+    def _run_gate(self, gate: QualityGate, factor: Factor) -> Optional[str]:
+        # Delayed import to avoid a circular import at module load.
+        from .quality import gate_factor
+
+        return gate_factor(gate, factor.code, factor.name)
+
+    def _execute(self, factor: Factor, data: pd.DataFrame) -> Optional[pd.Series]:
+        try:
+            func = executor.compile_factor(factor.code)
+        except Exception as exc:  # pragma: no cover - compile errors
+            logger.info("Factor %s failed to compile: %s", factor.name, exc)
+            return None
+        try:
+            return executor.apply_factor(data, func, factor.name)
+        except Exception as exc:
+            logger.info("Factor %s failed to execute: %s", factor.name, exc)
+            return None
+
+    # ------------------------------------------------------------------ #
     # Main
     # ------------------------------------------------------------------ #
     def run(self) -> SearchResult:
         random.seed(self.cfg.generation.random_state)
         df = self._load()
-        label = pipeline.compute_label(df, self.cfg.forecast_horizon)
+        label = self.compute_label(df, self.cfg.forecast_horizon)
         columns_desc = self._describe(df)
         columns_num = len(df.columns)
 
@@ -117,8 +191,8 @@ class CogAlpha:
                 gen.num_per_request, self.cfg.forecast_horizon, None,
             )
             for pf in pfs:
-                f = pipeline.produce_factor(
-                    pf, gate, df, label, self.cfg,
+                f = self.produce_factor(
+                    pf, gate, df, label,
                     theme=agent_id, level=level, agent_id=agent_id,
                     generation=0, source="generated",
                 )
@@ -243,8 +317,8 @@ class CogAlpha:
                 candidates = [(pf, "crossover") for pf in pfs]
 
             for pf, source in candidates:
-                f = pipeline.produce_factor(
-                    pf, gate, df, label, cfg,
+                f = self.produce_factor(
+                    pf, gate, df, label,
                     theme=agent_id, level=level, agent_id=agent_id,
                     generation=generation_idx, source=source,
                 )
