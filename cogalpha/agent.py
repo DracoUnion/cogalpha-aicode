@@ -1,14 +1,14 @@
-"""Agent: drives the LLM to run factor agents.
+"""Agent: prompts, factor generation/evolution, and the quality checker.
 
-A single `Agent` owns the prompt construction (rendering `{placeholder}` tokens
-from the `prompt_loader` constants) and the `llm.complete` calls for the
-generation / mutation / crossover agents, plus the quality-prompt builders.
+A single `Agent` holds the LLM client plus the panel context (`columns_desc` /
+`columns_num`) and the config, and owns:
 
-Exposes:
-  - prompt builders: build_generation_prompt / build_quality_prompt /
-                     build_evolution_prompt    (render `{placeholder}` tokens)
-  - LLM drivers:     generate_code / mutate / crossover    (call `llm.complete`)
-  - helpers:         list_agents / _intro
+  - prompt construction: render `{placeholder}` tokens from the `prompt_loader`
+    constants (build_generation / build_quality / build_evolution prompts)
+  - factor generation / evolution: `generate_code` / `mutate` / `crossover`
+    via `llm.complete`
+  - quality checking (formerly `QualityGate`): static checks, LLM quality
+    review, repair, judge, and logic improvement, orchestrated by `gate_factor`
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from typing import List, Optional, Tuple
 
 from . import executor
 from .llm_client import LLMClient
-from .models import FeedbackSummary, ParsedFunction
+from .models import CogAlphaConfig, FeedbackSummary, JudgeResult, ParsedFunction, QualityResult
 from .prompt_loader import (
     _AGENTS,
     _EFFECTIVE_ANALYSIS,
@@ -31,6 +31,8 @@ from .prompt_loader import (
 )
 
 logger = logging.getLogger(__name__)
+
+MAX_REPAIR_ATTEMPTS_DEFAULT = 3
 
 
 def _render_placeholders(prompt: str, **kw) -> str:
@@ -58,15 +60,38 @@ def _render_cot_block(template: str, cot: str) -> str:
     return template.replace("{effective_CoT}", cot).replace("{ineffective_CoT}", cot)
 
 
+def _quality_issues(raw: str) -> List[str]:
+    """Extract the bulleted issue list from a code-quality review."""
+    issues = []
+    for l in raw.splitlines():
+        s = l.strip()
+        if s.startswith("-") or s.startswith("*") or s.startswith("1."):
+            issues.append(s.lstrip("-*0123456789. ").strip())
+            if len(issues) >= 8:
+                break
+    return issues
+
+
+def _quality_corrected(raw: str) -> str:
+    funcs = executor.parse_generated_code(raw)
+    return funcs[0].code if funcs else ""
+
+
 class Agent:
-    """Holds an LLM client and performs the factor operations.
+    """Holds the LLM client and performs prompt build, factor ops, and quality."""
 
-    References the prompt constants from `prompt_loader` directly and calls
-    `llm.complete` for the generation / mutation / crossover agents.
-    """
-
-    def __init__(self, llm: LLMClient) -> None:
+    def __init__(
+        self,
+        llm: LLMClient,
+        cfg: CogAlphaConfig,
+        columns_desc: str = "",
+        columns_num: int = 0,
+    ) -> None:
         self.llm = llm
+        self.cfg = cfg
+        self.columns_desc = columns_desc
+        self.columns_num = columns_num
+        self.max_repair = cfg.generation.max_repair_attempts or MAX_REPAIR_ATTEMPTS_DEFAULT
 
     # ------------------------------------------------------------------ #
     # Prompt building
@@ -204,6 +229,128 @@ class Agent:
             logger.error("crossover call failed: %s", exc)
             return []
         return executor.parse_generated_code(raw)
+
+    # ------------------------------------------------------------------ #
+    # Quality checker (static + LLM agents)
+    # ------------------------------------------------------------------ #
+    def static_check(self, code: str, name: str) -> List[str]:
+        """Deterministic AST checks: nested loops, syntax, return column name."""
+        issues = executor.check_code_static(code, name)
+        issues += executor.validate_name(code, name)
+        return issues
+
+    def judge(self, code: str) -> JudgeResult:
+        """Judge Agent: decide Accept/Reject + improvement feedback."""
+        prompt = self.build_quality_prompt("judge_agent", new_factor_code=code)
+        return self.llm.complete_json(_SYSTEM_MESSAGE, prompt, JudgeResult)
+
+    def code_quality(self, code: str) -> QualityResult:
+        """Code Quality Agent: LLM review that complements static checks."""
+        prompt = self.build_quality_prompt("code_quality_agent", code=code)
+        try:
+            raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
+        except Exception as exc:  # pragma: no cover - API dependent
+            logger.warning("code_quality LLM call failed: %s", exc)
+            return QualityResult(status="correct")
+        issues = _quality_issues(raw)
+        corrected = _quality_corrected(raw)
+        status = "needs adjustments" if issues else "correct"
+        return QualityResult(status=status, issues=issues, corrected_code=corrected)
+
+    def repair(self, old_code: str, error: str) -> str:
+        """Code Repair Agent: fix an execution/static failure."""
+        prompt = self.build_quality_prompt(
+            "code_repair_agent",
+            columns_num=self.columns_num,
+            columns_desc=self.columns_desc,
+            old_code=old_code,
+            error=error,
+        )
+        raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
+        funcs = executor.parse_generated_code(raw)
+        return funcs[0].code if funcs else old_code
+
+    def logic_improve(self, old_code: str, feedback: str) -> str:
+        """Logic Improvement Agent: improve a rejected factor."""
+        prompt = self.build_quality_prompt(
+            "logic_improvement_agent",
+            columns_num=self.columns_num,
+            columns_desc=self.columns_desc,
+            old_code=old_code,
+            dynamic_feedback=feedback,
+        )
+        raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
+        funcs = executor.parse_generated_code(raw)
+        return funcs[0].code if funcs else old_code
+
+    def check_code(self, code: str, name: str) -> str:
+        """Run quality checks and (optionally) the LLM quality agent.
+
+        Returns the possibly-repaired code. Static violations trigger the
+        repair agent; nested-loop/infinite-loop violations are hard failures
+        that cannot be auto-repaired (returned unrepaired so the caller may
+        discard). When `self.cfg.use_llm` is False, only the deterministic
+        static checks run (no network calls).
+        """
+        issues = self.static_check(code, name)
+        hard_fail = any("Nested loop" in i or "infinite loop" in i or "SyntaxError" in i for i in issues)
+        if hard_fail:
+            logger.debug("Hard static violation for %s: %s", name, issues)
+            return code
+
+        if not self.cfg.use_llm:
+            return code
+
+        # LLM quality review for style/compliance issues.
+        try:
+            qr = self.code_quality(code)
+            code = qr.corrected_code or code
+        except Exception as exc:  # pragma: no cover
+            logger.warning("code_quality failed for %s: %s", name, exc)
+
+        return code
+
+    def gate_factor(self, code: str, name: str, *, use_judge: bool = True) -> Optional[str]:
+        """Run the full quality pipeline for one factor.
+
+        Quality (with repair rounds) -> judge -> logic improvement.
+        Returns the final acceptable code, or None if the factor was discarded.
+        """
+        current = code
+        # 1) Quality check (+ repair rounds for non-hard failures).
+        for attempt in range(self.max_repair):
+            current = self.check_code(current, name)
+            issues = self.static_check(current, name)
+            if not issues:
+                break
+            if not self.cfg.use_llm:
+                # Offline mode cannot call the repair agent.
+                logger.info("Factor %s has static issues and LLM repair is disabled; discarding.", name)
+                return None
+            if attempt == self.max_repair - 1:
+                logger.info("Factor %s failed quality after %d repairs; discarding.", name, self.max_repair)
+                return None
+            # Get an error message to feed the repair agent.
+            error = "; ".join(issues[:4]) or "unknown static issue"
+            current = self.repair(current, error)
+
+        # 2) Judge.
+        if use_judge and self.cfg.use_llm:
+            try:
+                jr = self.judge(current)
+            except Exception as exc:  # pragma: no cover
+                logger.warning("judge failed for %s: %s", name, exc)
+                jr = JudgeResult(recommendation="Accept")
+            if jr.recommendation != "Accept":
+                # 3) Logic improvement.
+                improved = self.logic_improve(current, jr.feedback)
+                # Re-run static checks on the improved version.
+                if not self.static_check(improved, name):
+                    current = improved
+                else:
+                    logger.info("Logic-improved factor %s still invalid; keeping original.", name)
+
+        return current
 
     # ------------------------------------------------------------------ #
     # Helpers

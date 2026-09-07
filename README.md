@@ -16,8 +16,7 @@ src/
     ├── data_loader.py      # 列描述助手（面板加载见 CogAlpha._load）
     ├── executor.py         # 静态检查（AST 禁嵌套循环）+ 编译执行因子
     ├── evaluator.py        # IC / RankIC / ICIR / RankICIR / MI
-    ├── quality.py          # 多智能体质量检查器（质量/修复/评判/逻辑优化）
-    ├── agent.py            # Agent 类（LLMClient）：提示词构建 + generate/mutate/crossover
+    ├── agent.py            # Agent 类（LLMClient）：提示词构建 + generate/mutate/crossover + 质量检查（原 QualityGate）
     ├── feedback.py         # 自适应生成反馈（有效/无效因子摘要）
     ├── selection.py        # 池管理 + 合格/精英分类
     └── search.py           # 主进化搜索编排器（CogAlpha 类：面板加载 + 流水线 + 搜索）
@@ -51,8 +50,9 @@ python run.py --data data.parquet --horizon 10 --output ./out --model gpt-4o-min
   system_message / 反馈分析等），组装与占位符替换由 `agent.Agent` 完成。
 - **LLM 调用**：生成/进化智能体从 `{0.7,…,1.2}` 均匀抽样温度；质量检查器固定 0.8；
   评判/摘要等返回 JSON 并强制转换为 `pydantic` 模型（`complete_json`）。
-- **质量检查器**：静态 AST 检查（嵌套循环 / `while True` / 语法 / 返回列名）为确定层，
-  LLM 质量、评判、逻辑优化、修复为可开关层（`cfg.use_llm`）。
+- **质量检查**（`agent.Agent.gate_factor`，由原 `QualityGate` 并入）：静态 AST 检查
+  （嵌套循环 / `while True` / 语法 / 返回列名）为确定层，LLM 质量、评判、逻辑优化、
+  修复为可开关层（`cfg.use_llm`）。
 - **执行**：因子函数按 ticker 分组应用（`apply_factor`），返回 `(date,ticker)` 索引的 Series；
   NaN 比例超 30% 的因子丢弃。
 - **评估**：前向收益标签（默认 10 日 open-to-open），逐日横截面相关平均得

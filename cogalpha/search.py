@@ -31,7 +31,6 @@ from .models import CogAlphaConfig
 from .data_loader import build_column_desc_manual, describe_columns
 from .llm_client import LLMClient
 from .prompt_loader import _AGENTS
-from .quality import QualityGate
 from .models import Factor, FeedbackSummary, ParsedFunction, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -43,7 +42,7 @@ class CogAlpha:
     def __init__(self, cfg: CogAlphaConfig) -> None:
         self.cfg = cfg
         self.llm = LLMClient(cfg)
-        self.agent = Agent(self.llm)
+        self.agent = Agent(self.llm, self.cfg)
         self._logger = logger
 
     # ------------------------------------------------------------------ #
@@ -99,7 +98,6 @@ class CogAlpha:
     def produce_factor(
         self,
         pf: ParsedFunction,
-        gate: QualityGate,
         data: pd.DataFrame,
         label: pd.Series,
         *,
@@ -109,7 +107,7 @@ class CogAlpha:
         generation: int = 0,
         source: str = "generated",
     ) -> Optional[Factor]:
-        """Run the quality gate, execute, and evaluate a parsed function."""
+        """Run quality, execute, and evaluate a parsed function."""
         factor = Factor(
             name=pf.name,
             code=pf.code,
@@ -122,7 +120,7 @@ class CogAlpha:
         )
 
         # 1) Quality checker (repair + judge + logic improvement).
-        final_code = self._run_gate(gate, factor)
+        final_code = self.agent.gate_factor(factor.code, factor.name)
         if final_code is None:
             return None
         factor.code = final_code
@@ -145,12 +143,6 @@ class CogAlpha:
         factor = selection.classify_factor(factor, self.cfg.evaluation)
         return factor
 
-    def _run_gate(self, gate: QualityGate, factor: Factor) -> Optional[str]:
-        # Delayed import to avoid a circular import at module load.
-        from .quality import gate_factor
-
-        return gate_factor(gate, factor.code, factor.name)
-
     def _execute(self, factor: Factor, data: pd.DataFrame) -> Optional[pd.Series]:
         try:
             func = executor.compile_factor(factor.code)
@@ -172,8 +164,9 @@ class CogAlpha:
         label = self.compute_label(df, self.cfg.forecast_horizon)
         columns_desc = self._describe(df)
         columns_num = len(df.columns)
+        self.agent.columns_desc = columns_desc
+        self.agent.columns_num = columns_num
 
-        gate = QualityGate(self.llm, columns_desc, columns_num, self.cfg, agent=self.agent)
         gen = self.cfg.generation
         agent_ids = self.agent.list_agents()
 
@@ -192,7 +185,7 @@ class CogAlpha:
             )
             for pf in pfs:
                 f = self.produce_factor(
-                    pf, gate, df, label,
+                    pf, df, label,
                     theme=agent_id, level=level, agent_id=agent_id,
                     generation=0, source="generated",
                 )
@@ -213,7 +206,7 @@ class CogAlpha:
                                   search_idx + 1, gen.evolution_searches, agent_id)
                 level, _, _ = _AGENTS[agent_id]
                 parent_pool, result = self._evolve_agent(
-                    df, label, columns_desc, columns_num, gate, agent_id, level, parent_pool, result
+                    df, label, columns_desc, columns_num, agent_id, level, parent_pool, result
                 )
 
         result.candidates = selection.rank_factors(result.candidates)
@@ -230,7 +223,6 @@ class CogAlpha:
         label: pd.Series,
         columns_desc: str,
         columns_num: int,
-        gate: QualityGate,
         agent_id: str,
         level: str,
         parent_pool: List[Factor],
@@ -246,7 +238,7 @@ class CogAlpha:
 
                 # Breed the child pool from the parent pool.
                 children = self._breed(
-                    df, label, columns_desc, columns_num, gate,
+                    df, label, columns_desc, columns_num,
                     agent_id, level, parent_pool, feedback, generation_idx,
                 )
 
@@ -278,7 +270,7 @@ class CogAlpha:
     # ------------------------------------------------------------------ #
     def _breed(
         self,
-        df, label, columns_desc, columns_num, gate,
+        df, label, columns_desc, columns_num,
         agent_id, level, parent_pool, feedback, generation_idx,
     ) -> List[Factor]:
         cfg = self.cfg
@@ -318,7 +310,7 @@ class CogAlpha:
 
             for pf, source in candidates:
                 f = self.produce_factor(
-                    pf, gate, df, label,
+                    pf, df, label,
                     theme=agent_id, level=level, agent_id=agent_id,
                     generation=generation_idx, source=source,
                 )

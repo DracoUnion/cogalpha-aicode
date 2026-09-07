@@ -98,7 +98,6 @@ def run_demo(args: argparse.Namespace) -> None:
     """Offline end-to-end exercise using a stub LLM and synthetic data."""
     from cogalpha import selection
     from cogalpha.data_loader import build_column_desc_manual
-    from cogalpha.quality import QualityGate
     from cogalpha.models import ParsedFunction
 
     cfg = build_config(args)
@@ -112,8 +111,8 @@ def run_demo(args: argparse.Namespace) -> None:
     label = engine.compute_label(df, cfg.forecast_horizon)
     columns_desc = build_column_desc_manual(list(df.columns))
     columns_num = len(df.columns)
-
-    gate = QualityGate(engine.llm, columns_desc, columns_num, cfg, agent=engine.agent)
+    engine.agent.columns_desc = columns_desc
+    engine.agent.columns_num = columns_num
 
     # Build a tiny parent pool from the deterministic demo factors.
     import re
@@ -123,7 +122,7 @@ def run_demo(args: argparse.Namespace) -> None:
         name = m.group(1) if m else "factor_demo"
         pf = ParsedFunction(name=name, code=code)
         f = engine.produce_factor(
-            pf, gate, df, label, theme="demo", level="demo",
+            pf, df, label, theme="demo", level="demo",
             agent_id="demo", generation=0, source="generated",
         )
         if f is not None:
