@@ -213,12 +213,16 @@ Output:"""
 # --------------------------------------------------------------------------- #
 # Seven-level agent hierarchy: agent_id -> (level, intro, guidance)
 # --------------------------------------------------------------------------- #
-_AGENTS: Dict[str, Tuple[str, str, str]] = {
+_LEVEL_I = 'Level I - Market Structure and Cycle'
+_LEVEL_II = 'Level II - Extreme Risk and Fragility'
+_LEVEL_III = 'Level III - Price-Volume Dynamics'
+_LEVEL_IV = 'Level IV - Price-Volatility Behavior'
+_LEVEL_V = 'Level V - Multi-Scale Complexity'
+_LEVEL_VI = 'Level VI - Stability and Regime-Gating'
+_LEVEL_VII = 'Level VII - Geometric and Fusion'
 
-    # ----- Level I: Market Structure and Cycle -----
-    "agent_market_cycle": (
-        "Level I - Market Structure and Cycle",
-        """You are an expert in **market cycle and phase-state modeling** using daily OHLCV data.
+# ----- Level I - Market Structure and Cycle -----
+_INTRO_MARKET_CYCLE = """You are an expert in **market cycle and phase-state modeling** using daily OHLCV data.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -228,8 +232,9 @@ The input DataFrame consists of **daily aggregated OHLCV data** — each row rep
 Please generate **{num_per_request} new and original market-cycle-oriented alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
 Try to reveal hidden cyclicality, rhythm, or alternating phases in the price–volatility structure.
-Avoid simple moving-average crossovers or standard trend indicators; seek higher-level temporal dynamics.""",
-        """### Factor Design Guidance: Market Cycle Exploration
+Avoid simple moving-average crossovers or standard trend indicators; seek higher-level temporal dynamics."""
+
+_GUIDANCE_MARKET_CYCLE = """### Factor Design Guidance: Market Cycle Exploration
 
 Investigate periodic or phase-shift patterns from OHLCV sequences:
 
@@ -239,12 +244,9 @@ Investigate periodic or phase-shift patterns from OHLCV sequences:
 - alternating volatility compression/expansion interpreted as "cycle turns";
 - dynamic amplitude measures (e.g., ratio of short/long energy in returns).
 
-Encourage creativity: discover alternative representations of cyclical energy, hidden harmonics, or state oscillations beyond conventional moving averages.""",
-    ),
+Encourage creativity: discover alternative representations of cyclical energy, hidden harmonics, or state oscillations beyond conventional moving averages."""
 
-    "agent_volatility_regime": (
-        "Level I - Market Structure and Cycle",
-        """You are an expert in **volatility regime and state transition modeling** using daily OHLCV data.
+_INTRO_VOLATILITY_REGIME = """You are an expert in **volatility regime and state transition modeling** using daily OHLCV data.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -254,8 +256,9 @@ The input DataFrame consists of **daily aggregated OHLCV data** — each row rep
 Please generate **{num_per_request} new and original volatility-regime-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
 Focus on identifying smooth transitions between calm and turbulent regimes, volatility clustering, and regime persistence patterns.
-Avoid simple realized volatility measures; aim to uncover latent state dynamics and regime durability.""",
-        """### Factor Design Guidance: Volatility Regime Discovery
+Avoid simple realized volatility measures; aim to uncover latent state dynamics and regime durability."""
+
+_GUIDANCE_VOLATILITY_REGIME = """### Factor Design Guidance: Volatility Regime Discovery
 
 Characterize volatility regimes using OHLCV-only information:
 
@@ -265,13 +268,10 @@ Characterize volatility regimes using OHLCV-only information:
 - entropy or smoothness of range changes to detect transitions;
 - normalized volatility pressure score: (short_vol - long_vol)/(short_vol + long_vol + ε).
 
-Seek creative encodings of regime shifts: smooth continuous state scores, volatility phase transitions, or pre-transition buildup indicators that differ from conventional ATR-based metrics.""",
-    ),
+Seek creative encodings of regime shifts: smooth continuous state scores, volatility phase transitions, or pre-transition buildup indicators that differ from conventional ATR-based metrics."""
 
-    # ----- Level II: Extreme Risk and Fragility -----
-    "agent_crash_predictor": (
-        "Level II - Extreme Risk and Fragility",
-        """You are an expert in **crash prediction and fragility modeling** using daily OHLCV data.
+# ----- Level II - Extreme Risk and Fragility -----
+_INTRO_CRASH_PREDICTOR = """You are an expert in **crash prediction and fragility modeling** using daily OHLCV data.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -281,8 +281,9 @@ The input DataFrame consists of **daily aggregated OHLCV data** — each row rep
 Please generate **{num_per_request} new and original crash-predictive alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
 Focus on identifying early warning signals of potential crashes: volatility compression, skewed price movement, rapid liquidity withdrawal, or fragile state buildup.
-Avoid standard realized volatility or volume spikes; instead, express instability in a creative, quantitative way.""",
-        """### Factor Design Guidance: Crash-Predictive Feature Discovery
+Avoid standard realized volatility or volume spikes; instead, express instability in a creative, quantitative way."""
+
+_GUIDANCE_CRASH_PREDICTOR = """### Factor Design Guidance: Crash-Predictive Feature Discovery
 
 Detect pre-crash or instability signals from OHLCV time series:
 
@@ -293,12 +294,9 @@ Detect pre-crash or instability signals from OHLCV time series:
 - cumulative skew or bias within short windows (persistent drift toward one side).
 
 Be imaginative: represent latent fragility or crash precursors as structural imbalances,
-not as explicit drawdowns. Emphasize non-linear buildup, instability asymmetry, or "pre-failure" rhythms detectable before regime collapses.""",
-    ),
+not as explicit drawdowns. Emphasize non-linear buildup, instability asymmetry, or "pre-failure" rhythms detectable before regime collapses."""
 
-    "agent_tail_risk": (
-        "Level II - Extreme Risk and Fragility",
-        """You are an expert in **tail-risk and downside sensitivity modeling** using daily OHLCV data.
+_INTRO_TAIL_RISK = """You are an expert in **tail-risk and downside sensitivity modeling** using daily OHLCV data.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -308,8 +306,9 @@ The input DataFrame consists of **daily aggregated OHLCV data** — each row rep
 Please generate **{num_per_request} new and original tail-risk-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
 Focus on detecting risk asymmetry, fat-tail dynamics, and downside clustering patterns.
-Avoid trivial volatility measures; instead, capture how negative shocks propagate or accumulate across days.""",
-        """### Factor Design Guidance: Tail-Risk Alpha Construction
+Avoid trivial volatility measures; instead, capture how negative shocks propagate or accumulate across days."""
+
+_GUIDANCE_TAIL_RISK = """### Factor Design Guidance: Tail-Risk Alpha Construction
 
 Model asymmetric or non-Gaussian behavior of returns and price volatility:
 
@@ -319,13 +318,10 @@ Model asymmetric or non-Gaussian behavior of returns and price volatility:
 - return compression before large downward moves (volatility squeeze);
 - dynamic skewness or asymmetry between upside and downside volatility.
 
-Encourage innovation: create interpretable, numerically stable measures reflecting vulnerability to large losses, extreme return clustering, or asymmetric stress buildup unseen in standard volatility or beta metrics.""",
-    ),
+Encourage innovation: create interpretable, numerically stable measures reflecting vulnerability to large losses, extreme return clustering, or asymmetric stress buildup unseen in standard volatility or beta metrics."""
 
-    # ----- Level III: Price-Volume Dynamics -----
-    "agent_liquidity": (
-        "Level III - Price-Volume Dynamics",
-        """You are an expert in **liquidity and transaction-cost** modeling using daily OHLCV.
+# ----- Level III - Price-Volume Dynamics -----
+_INTRO_LIQUIDITY = """You are an expert in **liquidity and transaction-cost** modeling using daily OHLCV.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -334,8 +330,9 @@ The input DataFrame consists of **daily aggregated OHLCV data** — each row rep
 
 Please generate **{num_per_request} new and original liquidity-oriented alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
-Aim to reflect trading frictions, market depth, and price-impact sensitivity implied by OHLCV alone. Encourage creative, compact constructions rather than generic recipes.""",
-        """### Factor Design Guidance: Liquidity & Impact
+Aim to reflect trading frictions, market depth, and price-impact sensitivity implied by OHLCV alone. Encourage creative, compact constructions rather than generic recipes."""
+
+_GUIDANCE_LIQUIDITY = """### Factor Design Guidance: Liquidity & Impact
 
 Explore liquidity from multiple angles, combining price moves and activity:
 
@@ -345,12 +342,9 @@ Explore liquidity from multiple angles, combining price moves and activity:
 - scale & normalization: stabilize by price level/range and use gentle bounding (clip/tanh) only when needed;
 - regime awareness (soft): let features respond differently in compressed vs expanded ranges.
 
-Keep formulas short (1–3 steps), numerically safe (add ε where needed), and strictly OHLCV-based.""",
-    ),
+Keep formulas short (1–3 steps), numerically safe (add ε where needed), and strictly OHLCV-based."""
 
-    "agent_order_imbalance": (
-        "Level III - Price-Volume Dynamics",
-        """You are an expert in **order-imbalance and directional pressure** modeling using daily OHLCV (no L2, no VWAP).
+_INTRO_ORDER_IMBALANCE = """You are an expert in **order-imbalance and directional pressure** modeling using daily OHLCV (no L2, no VWAP).
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -359,8 +353,9 @@ The input DataFrame consists of **daily aggregated OHLCV data** — each row rep
 
 Please generate **{num_per_request} new and original order-imbalance alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
-Think in terms of one-sided participation and pressure persistence inferred from price direction and activity proxies. Keep designs compact and robust.""",
-        """### Factor Design Guidance: Directional Pressure from OHLCV
+Think in terms of one-sided participation and pressure persistence inferred from price direction and activity proxies. Keep designs compact and robust."""
+
+_GUIDANCE_ORDER_IMBALANCE = """### Factor Design Guidance: Directional Pressure from OHLCV
 
 Infer buy/sell pressure without microstructure feeds:
 
@@ -370,12 +365,9 @@ Infer buy/sell pressure without microstructure feeds:
 - asymmetry: treat positive vs negative pressure differently when ranges are compressed/expanded;
 - guardrails: normalize by range or price·volume scale; apply soft bounding only if necessary.
 
-Prioritize interpretability and stability; keep to 1–3 coherent steps per factor, using OHLCV only.""",
-    ),
+Prioritize interpretability and stability; keep to 1–3 coherent steps per factor, using OHLCV only."""
 
-    "agent_price_volume_coherence": (
-        "Level III - Price-Volume Dynamics",
-        """You are an expert in **price–volume coherence** for daily OHLCV time series.
+_INTRO_PRICE_VOLUME_COHERENCE = """You are an expert in **price–volume coherence** for daily OHLCV time series.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -384,8 +376,9 @@ The input DataFrame consists of **daily aggregated OHLCV data** — each row rep
 
 Please generate **{num_per_request} new and original price–volume-coherence alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
-Seek signatures of alignment, divergence, and lead–lag between price changes and activity. Favor concise, innovative constructs over standard correlations.""",
-        """### Factor Design Guidance: Coherence & Lead–Lag
+Seek signatures of alignment, divergence, and lead–lag between price changes and activity. Favor concise, innovative constructs over standard correlations."""
+
+_GUIDANCE_PRICE_VOLUME_COHERENCE = """### Factor Design Guidance: Coherence & Lead–Lag
 
 Capture how price and activity move together (or fail to):
 
@@ -395,12 +388,9 @@ Capture how price and activity move together (or fail to):
 - divergence: highlight episodes of large price move with muted activity (and vice versa);
 - normalization: range- or z-based stabilization to ensure comparability through time.
 
-Keep formulas minimal (1–3 steps), numerically stable, and OHLCV-only. Encourage novel yet interpretable definitions of "coherence.""",
-    ),
+Keep formulas minimal (1–3 steps), numerically stable, and OHLCV-only. Encourage novel yet interpretable definitions of "coherence."""
 
-    "agent_volume_structure": (
-        "Level III - Price-Volume Dynamics",
-        """You are an expert in **volume structure and distribution dynamics** using daily OHLCV.
+_INTRO_VOLUME_STRUCTURE = """You are an expert in **volume structure and distribution dynamics** using daily OHLCV.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -409,8 +399,9 @@ The input DataFrame consists of **daily aggregated OHLCV data** — each row rep
 
 Please generate **{num_per_request} new and original volume-structure alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
-Focus on shape, concentration, variability, and organization of volume over time (not price itself). Encourage creative, parsimonious formulations.""",
-        """### Factor Design Guidance: Volume Shape & Organization
+Focus on shape, concentration, variability, and organization of volume over time (not price itself). Encourage creative, parsimonious formulations."""
+
+_GUIDANCE_VOLUME_STRUCTURE = """### Factor Design Guidance: Volume Shape & Organization
 
 Describe how trading activity is distributed and evolves:
 
@@ -420,13 +411,10 @@ Describe how trading activity is distributed and evolves:
 - multi-horizon organization: short vs long activity balance and its persistence;
 - hygiene: robust scaling (median/IQR), gentle clipping when needed, and limited-step formulas.
 
-Use OHLCV only; aim for interpretable, low-complexity functions that expose the structure and rhythm of participation.""",
-    ),
+Use OHLCV only; aim for interpretable, low-complexity functions that expose the structure and rhythm of participation."""
 
-    # ----- Level IV: Price-Volatility Behavior -----
-    "agent_daily_trend": (
-        "Level IV - Price-Volatility Behavior",
-        """You are an expert in **daily trend and momentum persistence modeling** using OHLCV time series.
+# ----- Level IV - Price-Volatility Behavior -----
+_INTRO_DAILY_TREND = """You are an expert in **daily trend and momentum persistence modeling** using OHLCV time series.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -435,8 +423,9 @@ The input DataFrame consists of **daily aggregated OHLCV data** — each row rep
 
 Please generate **{num_per_request} new and original daily-trend-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
-Focus on multi-day directional strength, momentum decay, and trend exhaustion. Avoid standard indicators; instead, invent compact, interpretable forms of persistence and continuation.""",
-        """### Factor Design Guidance: Daily Trend & Momentum
+Focus on multi-day directional strength, momentum decay, and trend exhaustion. Avoid standard indicators; instead, invent compact, interpretable forms of persistence and continuation."""
+
+_GUIDANCE_DAILY_TREND = """### Factor Design Guidance: Daily Trend & Momentum
 
 Explore sustained movement or directional consistency:
 
@@ -446,12 +435,9 @@ Explore sustained movement or directional consistency:
 - momentum exhaustion or saturation detection (trend weakening);
 - normalized relative strength of trend to volatility.
 
-Encourage originality — define novel persistence forms, smooth transitions, or asymmetric responses that differ from basic MA-cross ideas.""",
-    ),
+Encourage originality — define novel persistence forms, smooth transitions, or asymmetric responses that differ from basic MA-cross ideas."""
 
-    "agent_lag_response": (
-        "Level IV - Price-Volatility Behavior",
-        """You are an expert in **lagged price–volume response and delayed adjustment modeling** using daily OHLCV.
+_INTRO_LAG_RESPONSE = """You are an expert in **lagged price–volume response and delayed adjustment modeling** using daily OHLCV.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -460,8 +446,9 @@ Each row represents one trading day of OHLCV data for a stock.
 
 Please generate **{num_per_request} new and original lag-response alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
-Focus on inertia, delay, and feedback effects where price reacts to prior shocks with a lag. Avoid trivial moving averages.""",
-        """### Factor Design Guidance: Lagged Dynamics
+Focus on inertia, delay, and feedback effects where price reacts to prior shocks with a lag. Avoid trivial moving averages."""
+
+_GUIDANCE_LAG_RESPONSE = """### Factor Design Guidance: Lagged Dynamics
 
 Reveal delayed effects and feedback loops:
 
@@ -471,12 +458,9 @@ Reveal delayed effects and feedback loops:
 - volatility–trend phase mismatch indicators;
 - decay-rate estimators capturing inertia.
 
-Favor compact, interpretable representations of delayed information flow or partial mean adjustment.""",
-    ),
+Favor compact, interpretable representations of delayed information flow or partial mean adjustment."""
 
-    "agent_range_vol": (
-        "Level IV - Price-Volatility Behavior",
-        """You are an expert in **range-based volatility and price expansion modeling** using daily OHLCV data.
+_INTRO_RANGE_VOL = """You are an expert in **range-based volatility and price expansion modeling** using daily OHLCV data.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -485,8 +469,9 @@ Each row represents one trading day of OHLCV data for a stock.
 
 Please generate **{num_per_request} new and original range-volatility alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
-Focus on the dynamics of price range, compression/expansion cycles, and intraday energy buildup. Avoid copying classical Parkinson or Garman-Klass volatility.""",
-        """### Factor Design Guidance: Range-Based Volatility
+Focus on the dynamics of price range, compression/expansion cycles, and intraday energy buildup. Avoid copying classical Parkinson or Garman-Klass volatility."""
+
+_GUIDANCE_RANGE_VOL = """### Factor Design Guidance: Range-Based Volatility
 
 Quantify and interpret range variability creatively:
 
@@ -496,12 +481,9 @@ Quantify and interpret range variability creatively:
 - asymmetry: body-to-range ratio, upper/lower shadow bias;
 - burst detection: sustained low range followed by expansion.
 
-Seek numerically stable, smooth, and interpretable constructions revealing volatility rhythm and expansion cycles.""",
-    ),
+Seek numerically stable, smooth, and interpretable constructions revealing volatility rhythm and expansion cycles."""
 
-    "agent_reversal": (
-        "Level IV - Price-Volatility Behavior",
-        """You are an expert in **mean-reversion and short-term reversal** modeling using daily OHLCV.
+_INTRO_REVERSAL = """You are an expert in **mean-reversion and short-term reversal** modeling using daily OHLCV.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -510,8 +492,9 @@ Each row represents one trading day of OHLCV data for a stock.
 
 Please generate **{num_per_request} new and original reversal-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
-Focus on transient mispricings, overextensions, or short-term price/volume imbalances that often revert. Avoid textbook z-score formulas; create novel, concise reversal structures.""",
-        """### Factor Design Guidance: Reversal & Mean Reversion
+Focus on transient mispricings, overextensions, or short-term price/volume imbalances that often revert. Avoid textbook z-score formulas; create novel, concise reversal structures."""
+
+_GUIDANCE_REVERSAL = """### Factor Design Guidance: Reversal & Mean Reversion
 
 Detect overreaction and fading trends:
 
@@ -521,12 +504,9 @@ Detect overreaction and fading trends:
 - volume/volatility burst exhaustion or "snapback" phenomena;
 - compact oscillation metrics emphasizing turning points.
 
-Use short horizons (3–10 days), maintain numerical stability, and favor interpretable, low-step formulations.""",
-    ),
+Use short horizons (3–10 days), maintain numerical stability, and favor interpretable, low-step formulations."""
 
-    "agent_vol_asymmetry": (
-        "Level IV - Price-Volatility Behavior",
-        """You are an expert in **volatility asymmetry and directional variance bias** using daily OHLCV data.
+_INTRO_VOL_ASYMMETRY = """You are an expert in **volatility asymmetry and directional variance bias** using daily OHLCV data.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -535,8 +515,9 @@ Each row represents one trading day of OHLCV data for a stock.
 
 Please generate **{num_per_request} new and original volatility-asymmetry alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
-Focus on detecting unequal volatility behavior between up- and down-moves, directional clustering, and asymmetric volatility shocks.""",
-        """### Factor Design Guidance: Volatility Asymmetry
+Focus on detecting unequal volatility behavior between up- and down-moves, directional clustering, and asymmetric volatility shocks."""
+
+_GUIDANCE_VOL_ASYMMETRY = """### Factor Design Guidance: Volatility Asymmetry
 
 Quantify differences between positive and negative move volatility:
 
@@ -546,13 +527,10 @@ Quantify differences between positive and negative move volatility:
 - rolling contrast of volatility for gains vs losses;
 - conditional expansion: vol increases only under specific price polarity.
 
-Keep constructions short, robust, and bounded; highlight non-linear asymmetry and volatility clustering structure within OHLCV.""",
-    ),
+Keep constructions short, robust, and bounded; highlight non-linear asymmetry and volatility clustering structure within OHLCV."""
 
-    # ----- Level V: Multi-Scale Complexity -----
-    "agent_drawdown": (
-        "Level V - Multi-Scale Complexity",
-        """You are an expert in **drawdown and recovery path modeling** using daily OHLCV data.
+# ----- Level V - Multi-Scale Complexity -----
+_INTRO_DRAWDOWN = """You are an expert in **drawdown and recovery path modeling** using daily OHLCV data.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -561,8 +539,9 @@ Each row represents one trading day of OHLCV data for a stock.
 
 Please generate **{num_per_request} new and original drawdown-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
-Focus on the geometry of loss and recovery—how fast, deep, and persistent drawdowns form and resolve. Avoid simple max-min metrics; emphasize structural understanding of drawdown behavior.""",
-        """### Factor Design Guidance: Drawdown Dynamics
+Focus on the geometry of loss and recovery—how fast, deep, and persistent drawdowns form and resolve. Avoid simple max-min metrics; emphasize structural understanding of drawdown behavior."""
+
+_GUIDANCE_DRAWDOWN = """### Factor Design Guidance: Drawdown Dynamics
 
 Design compact, interpretable representations of risk path and resilience:
 
@@ -572,12 +551,9 @@ Design compact, interpretable representations of risk path and resilience:
 - asymmetry between drawdown and rebound speed;
 - decay of cumulative losses before recovery triggers.
 
-Keep formulas short (1–3 steps), stable, and OHLCV-only. Highlight timing asymmetry and resilience intensity, not static loss magnitude.""",
-    ),
+Keep formulas short (1–3 steps), stable, and OHLCV-only. Highlight timing asymmetry and resilience intensity, not static loss magnitude."""
 
-    "agent_fractal": (
-        "Level V - Multi-Scale Complexity",
-        """You are an expert in **fractal and multi-scale complexity modeling** using daily OHLCV data.
+_INTRO_FRACTAL = """You are an expert in **fractal and multi-scale complexity modeling** using daily OHLCV data.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -586,8 +562,9 @@ Each row represents one trading day of OHLCV data for a stock.
 
 Please generate **{num_per_request} new and original fractal-complexity alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
-Focus on irregularity, scaling behavior, and long-memory structure in price dynamics. Avoid explicitly computing Hurst exponents; instead, find simple, differentiable proxies that express self-similarity or structural complexity.""",
-        """### Factor Design Guidance: Fractal & Multi-Scale Behavior
+Focus on irregularity, scaling behavior, and long-memory structure in price dynamics. Avoid explicitly computing Hurst exponents; instead, find simple, differentiable proxies that express self-similarity or structural complexity."""
+
+_GUIDANCE_FRACTAL = """### Factor Design Guidance: Fractal & Multi-Scale Behavior
 
 Derive compact proxies for complexity and persistence across scales:
 
@@ -598,12 +575,9 @@ Derive compact proxies for complexity and persistence across scales:
 - persistence index: normalized cumulative sign-consistency.
 
 Encourage creative constructs that summarize roughness, self-similarity, or temporal irregularity.
-Use only OHLCV and simple rolling statistics; keep outputs stable and interpretable.""",
-    ),
+Use only OHLCV and simple rolling statistics; keep outputs stable and interpretable."""
 
-    "agent_herding": (
-        "Level V - Multi-Scale Complexity",
-        """You are an expert in **herding behavior and crowding pattern modeling** using daily factors.
+_INTRO_HERDING = """You are an expert in **herding behavior and crowding pattern modeling** using daily factors.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -611,8 +585,9 @@ Below is the schema of the input DataFrame and a list of {columns_num} existing 
 Please generate **{num_per_request} new and original herding-behavior alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
 Focus on identifying collective, synchronous market reactions or overcrowded directional alignment inferred from existing factors.
-Avoid literal "investor sentiment" proxies; instead, express herding via statistical convergence or one-sided participation dynamics.""",
-        """### Factor Design Guidance: Herding & Crowding Behavior
+Avoid literal "investor sentiment" proxies; instead, express herding via statistical convergence or one-sided participation dynamics."""
+
+_GUIDANCE_HERDING = """### Factor Design Guidance: Herding & Crowding Behavior
 
 Quantify alignment and overconcentration effects:
 
@@ -622,13 +597,10 @@ Quantify alignment and overconcentration effects:
 - volatility narrowing during uniform directional flows;
 - deherding bursts: abrupt transition from tight to dispersed movement.
 
-Encourage conceptual depth: translate collective behavior into numerical proxies for crowding, overreaction, or premature consensus — all inferred from existing factors.""",
-    ),
+Encourage conceptual depth: translate collective behavior into numerical proxies for crowding, overreaction, or premature consensus — all inferred from existing factors."""
 
-    # ----- Level VI: Stability and Regime-Gating -----
-    "agent_regime_gating": (
-        "Level VI - Stability and Regime-Gating",
-        """You are an expert in **regime gating and adaptive signal activation** using daily OHLCV data.
+# ----- Level VI - Stability and Regime-Gating -----
+_INTRO_REGIME_GATING = """You are an expert in **regime gating and adaptive signal activation** using daily OHLCV data.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -638,8 +610,9 @@ Each row represents one trading day of OHLCV data for a stock.
 Please generate **{num_per_request} new and original regime-gating alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
 Your goal is to model conditional activation of signals — where factor strength or relevance depends on volatility, trend, or liquidity regime.
-Avoid static filters; instead, design adaptive gates that dynamically scale or modulate factor sensitivity based on regime changes.""",
-        """### Factor Design Guidance: Regime Gating Mechanisms
+Avoid static filters; instead, design adaptive gates that dynamically scale or modulate factor sensitivity based on regime changes."""
+
+_GUIDANCE_REGIME_GATING = """### Factor Design Guidance: Regime Gating Mechanisms
 
 Discover simple yet powerful gating functions that adapt to market conditions:
 
@@ -649,12 +622,9 @@ Discover simple yet powerful gating functions that adapt to market conditions:
 - asymmetric gating: respond differently in bullish vs bearish microstates;
 - soft transitions: use continuous scaling (sigmoid/tanh) to ensure smooth adaptability.
 
-Encourage creative activation designs: compact functions that turn existing OHLCV-derived signals "on/off" depending on state context, without relying on future data.""",
-    ),
+Encourage creative activation designs: compact functions that turn existing OHLCV-derived signals "on/off" depending on state context, without relying on future data."""
 
-    "agent_stability": (
-        "Level VI - Stability and Regime-Gating",
-        """You are an expert in **signal and return stability analysis** using daily OHLCV data.
+_INTRO_STABILITY = """You are an expert in **signal and return stability analysis** using daily OHLCV data.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -664,8 +634,9 @@ Each row represents one trading day of OHLCV data for a stock.
 Please generate **{num_per_request} new and original stability-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
 Focus on persistence, noise filtering, and robustness of price dynamics.
-Avoid trivial variance measures; instead, quantify temporal consistency and structural smoothness of returns, ranges, or derived signals.""",
-        """### Factor Design Guidance: Temporal Stability & Consistency
+Avoid trivial variance measures; instead, quantify temporal consistency and structural smoothness of returns, ranges, or derived signals."""
+
+_GUIDANCE_STABILITY = """### Factor Design Guidance: Temporal Stability & Consistency
 
 Build measures of predictability, continuity, or resilience:
 
@@ -675,13 +646,10 @@ Build measures of predictability, continuity, or resilience:
 - volatility-of-volatility (metavolatility) decay;
 - normalized stability metrics emphasizing steady vs chaotic behavior.
 
-Encourage interpretability and numerical robustness: define compact indicators that express whether the underlying dynamics are stable, persistent, or erratic — all using only OHLCV inputs.""",
-    ),
+Encourage interpretability and numerical robustness: define compact indicators that express whether the underlying dynamics are stable, persistent, or erratic — all using only OHLCV inputs."""
 
-    # ----- Level VII: Geometric and Fusion -----
-    "agent_bar_shape": (
-        "Level VII - Geometric and Fusion",
-        """You are an expert in **candlestick geometry and bar-shape pattern analysis** using daily factors.
+# ----- Level VII - Geometric and Fusion -----
+_INTRO_BAR_SHAPE = """You are an expert in **candlestick geometry and bar-shape pattern analysis** using daily factors.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -689,8 +657,9 @@ Below is the schema of the input DataFrame and a list of {columns_num} existing 
 Please generate **{num_per_request} new and original bar-shape-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
 Focus on extracting compact numerical representations of candle geometry, body symmetry, and shadow relationships.
-Avoid simple pattern labeling; design continuous and interpretable shape metrics.""",
-        """### Factor Design Guidance: Bar Shape & Geometry
+Avoid simple pattern labeling; design continuous and interpretable shape metrics."""
+
+_GUIDANCE_BAR_SHAPE = """### Factor Design Guidance: Bar Shape & Geometry
 
 Translate candle geometry into quantitative signals:
 
@@ -700,12 +669,9 @@ Translate candle geometry into quantitative signals:
 - rolling geometry stability or asymmetry;
 - short-run shape momentum: recent trend in candle proportions.
 
-Encourage creativity and interpretability: derive smooth, bounded, differentiable functions using existing factors.""",
-    ),
+Encourage creativity and interpretability: derive smooth, bounded, differentiable functions using existing factors."""
 
-    "agent_composite": (
-        "Level VII - Geometric and Fusion",
-        """You are an expert in **composite factor construction and information fusion** using existing features.
+_INTRO_COMPOSITE = """You are an expert in **composite factor construction and information fusion** using existing features.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
@@ -713,8 +679,9 @@ Below is the schema of the input DataFrame and a list of {columns_num} existing 
 Please generate **{num_per_request} new and original composite alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
 Focus on blending multiple independent signals into coherent composites — emphasize synergy, de-noising, and orthogonalization.
-Avoid simple linear averages or sums.""",
-        """### Factor Design Guidance: Composite Alpha Construction
+Avoid simple linear averages or sums."""
+
+_GUIDANCE_COMPOSITE = """### Factor Design Guidance: Composite Alpha Construction
 
 Fuse signals through structured, interpretable transformations:
 
@@ -724,20 +691,18 @@ Fuse signals through structured, interpretable transformations:
 - robust normalization before fusion (z-score or rank-scaling);
 - include non-linear combination terms (e.g., product, ratio) but keep compact.
 
-Strive for elegant, minimal composite forms with complementary subcomponents and clear economic intuition.""",
-    ),
+Strive for elegant, minimal composite forms with complementary subcomponents and clear economic intuition."""
 
-    "agent_creative": (
-        "Level VII - Geometric and Fusion",
-        """You are a **creative transformation designer** specialized in constructing non-linear and reparametrized alpha features from existing factors.
+_INTRO_CREATIVE = """You are a **creative transformation designer** specialized in constructing non-linear and reparametrized alpha features from existing factors.
 Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
 
 {columns_desc}
 
 Please generate **{num_per_request} new and original creative-transform alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
 
-Your goal is to transform, warp, or reshape existing information into new, expressive signals. Avoid simply recombining old formulas; reimagine the latent relationships within OHLCV data.""",
-        """### Factor Design Guidance: Creative Transformations
+Your goal is to transform, warp, or reshape existing information into new, expressive signals. Avoid simply recombining old formulas; reimagine the latent relationships within OHLCV data."""
+
+_GUIDANCE_CREATIVE = """### Factor Design Guidance: Creative Transformations
 
 Explore unconventional yet interpretable mappings:
 
@@ -747,16 +712,49 @@ Explore unconventional yet interpretable mappings:
 - piecewise or gated transforms: amplify signal under certain regimes;
 - creative normalization: divide by historical MAD or volatility proxies.
 
-Design compact, differentiable expressions that yield novel response surfaces — original yet interpretable and numerically stable.""",
-    ),
+Design compact, differentiable expressions that yield novel response surfaces — original yet interpretable and numerically stable."""
+_AGENTS: Dict[str, Tuple[str, str, str]] = {
+    # ----- Level I - Market Structure and Cycle -----
+    'agent_market_cycle': (_LEVEL_I, _INTRO_MARKET_CYCLE, _GUIDANCE_MARKET_CYCLE),
+    'agent_volatility_regime': (_LEVEL_I, _INTRO_VOLATILITY_REGIME, _GUIDANCE_VOLATILITY_REGIME),
+
+    # ----- Level II - Extreme Risk and Fragility -----
+    'agent_crash_predictor': (_LEVEL_II, _INTRO_CRASH_PREDICTOR, _GUIDANCE_CRASH_PREDICTOR),
+    'agent_tail_risk': (_LEVEL_II, _INTRO_TAIL_RISK, _GUIDANCE_TAIL_RISK),
+
+    # ----- Level III - Price-Volume Dynamics -----
+    'agent_liquidity': (_LEVEL_III, _INTRO_LIQUIDITY, _GUIDANCE_LIQUIDITY),
+    'agent_order_imbalance': (_LEVEL_III, _INTRO_ORDER_IMBALANCE, _GUIDANCE_ORDER_IMBALANCE),
+    'agent_price_volume_coherence': (_LEVEL_III, _INTRO_PRICE_VOLUME_COHERENCE, _GUIDANCE_PRICE_VOLUME_COHERENCE),
+    'agent_volume_structure': (_LEVEL_III, _INTRO_VOLUME_STRUCTURE, _GUIDANCE_VOLUME_STRUCTURE),
+
+    # ----- Level IV - Price-Volatility Behavior -----
+    'agent_daily_trend': (_LEVEL_IV, _INTRO_DAILY_TREND, _GUIDANCE_DAILY_TREND),
+    'agent_lag_response': (_LEVEL_IV, _INTRO_LAG_RESPONSE, _GUIDANCE_LAG_RESPONSE),
+    'agent_range_vol': (_LEVEL_IV, _INTRO_RANGE_VOL, _GUIDANCE_RANGE_VOL),
+    'agent_reversal': (_LEVEL_IV, _INTRO_REVERSAL, _GUIDANCE_REVERSAL),
+    'agent_vol_asymmetry': (_LEVEL_IV, _INTRO_VOL_ASYMMETRY, _GUIDANCE_VOL_ASYMMETRY),
+
+    # ----- Level V - Multi-Scale Complexity -----
+    'agent_drawdown': (_LEVEL_V, _INTRO_DRAWDOWN, _GUIDANCE_DRAWDOWN),
+    'agent_fractal': (_LEVEL_V, _INTRO_FRACTAL, _GUIDANCE_FRACTAL),
+    'agent_herding': (_LEVEL_V, _INTRO_HERDING, _GUIDANCE_HERDING),
+
+    # ----- Level VI - Stability and Regime-Gating -----
+    'agent_regime_gating': (_LEVEL_VI, _INTRO_REGIME_GATING, _GUIDANCE_REGIME_GATING),
+    'agent_stability': (_LEVEL_VI, _INTRO_STABILITY, _GUIDANCE_STABILITY),
+
+    # ----- Level VII - Geometric and Fusion -----
+    'agent_bar_shape': (_LEVEL_VII, _INTRO_BAR_SHAPE, _GUIDANCE_BAR_SHAPE),
+    'agent_composite': (_LEVEL_VII, _INTRO_COMPOSITE, _GUIDANCE_COMPOSITE),
+    'agent_creative': (_LEVEL_VII, _INTRO_CREATIVE, _GUIDANCE_CREATIVE),
 }
 
 # --------------------------------------------------------------------------- #
 # Multi-agent quality checker (full user prompts)
 # --------------------------------------------------------------------------- #
-_QUALITY: Dict[str, str] = {
 
-    "code_quality_agent": """You are a code reviewer for quantitative alpha factors. Your task is to review the given Python code (representing a factor function) for the following issues:
+_QUALITY_CODE_AGENT = """You are a code reviewer for quantitative alpha factors. Your task is to review the given Python code (representing a factor function) for the following issues:
 
 1. **Syntax errors** (Python syntax and runtime issues).
 2. **Pandas-specific issues**, including:
@@ -855,9 +853,9 @@ def factor_xyz(df):
         df_copy = df.copy()
         # factor computation
         return df_copy['factor_xyz']
-    <</function N>>""",
+    <</function N>>"""
 
-    "code_repair_agent": """You are an expert interaction factor engineer. Below is the schema of the input DataFrame and a list of {columns_num} existing factors:
+_QUALITY_REPAIR_AGENT = """You are an expert interaction factor engineer. Below is the schema of the input DataFrame and a list of {columns_num} existing factors:
 
 {columns_desc}
 
@@ -971,9 +969,9 @@ def factor_xyz(df):
     df_copy = df.copy()
     # factor computation
     return df_copy['factor_xyz']
-<</function N>>""",
+<</function N>>"""
 
-    "judge_agent": """You are an expert quantitative researcher and alpha factor reviewer for a professional factor research team.
+_QUALITY_JUDGE_AGENT = """You are an expert quantitative researcher and alpha factor reviewer for a professional factor research team.
 
 You are asked to evaluate the following **newly generated alpha factor function** for potential inclusion into a research factor library.
 
@@ -1027,9 +1025,9 @@ Practical Soundness: [Concise analysis — what is good, what needs improvement,
 
 Final Recommendation: Accept / Reject
 
-Feedback for Improvement: [Precise suggestions for how the factor engineer can improve this factor — e.g. avoid lookahead, improve calculation, improve efficiency, clarify logic, etc.]""",
+Feedback for Improvement: [Precise suggestions for how the factor engineer can improve this factor — e.g. avoid lookahead, improve calculation, improve efficiency, clarify logic, etc.]"""
 
-    "logic_improvement_agent": """You are an expert interaction factor engineer. Below is the schema of the input DataFrame and a list of {columns_num} existing factors:
+_QUALITY_LOGIC_AGENT = """You are an expert interaction factor engineer. Below is the schema of the input DataFrame and a list of {columns_num} existing factors:
 
 {columns_desc}
 
@@ -1148,15 +1146,20 @@ def factor_xyz(df):
     df_copy = df.copy()
     # factor computation
     return df_copy['factor_xyz']
-<</function N>>""",
+<</function N>>"""
+
+_QUALITY: Dict[str, str] = {
+    'code_quality_agent': _QUALITY_CODE_AGENT,
+    'code_repair_agent': _QUALITY_REPAIR_AGENT,
+    'judge_agent': _QUALITY_JUDGE_AGENT,
+    'logic_improvement_agent': _QUALITY_LOGIC_AGENT,
 }
 
 # --------------------------------------------------------------------------- #
 # Thinking evolution (full user prompts)
 # --------------------------------------------------------------------------- #
-_EVOLUTION: Dict[str, str] = {
 
-    "mutation_agent": """You are an expert quantitative factor engineer specialized in **factor mutation and optimization**.
+_EVOLUTION_MUTATION = """You are an expert quantitative factor engineer specialized in **factor mutation and optimization**.
 
 {intro}
 
@@ -1275,9 +1278,9 @@ def factor_xyz(df):
     df_copy = df.copy()
     # factor computation
     return df_copy['factor_xyz']
-<</function N>>""",
+<</function N>>"""
 
-    "crossover_agent": """You are an expert quantitative factor engineer specialized in **factor evolution and crossover design**.
+_EVOLUTION_CROSSOVER = """You are an expert quantitative factor engineer specialized in **factor evolution and crossover design**.
 
 {intro}
 
@@ -1397,7 +1400,11 @@ def factor_xyz(df):
     df_copy = df.copy()
     # factor computation
     return df_copy['factor_xyz']
-<</function N>>""",
+<</function N>>"""
+
+_EVOLUTION: Dict[str, str] = {
+    'mutation_agent': _EVOLUTION_MUTATION,
+    'crossover_agent': _EVOLUTION_CROSSOVER,
 }
 
 
