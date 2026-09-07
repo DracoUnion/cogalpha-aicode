@@ -28,7 +28,7 @@ from . import evolution as evolution_agents
 from . import feedback as feedback_mod
 from . import generation, pipeline, selection
 from .models import CogAlphaConfig
-from .data_loader import build_column_desc_manual, describe_columns, load_panel
+from .data_loader import build_column_desc_manual, describe_columns
 from .llm_client import LLMClient
 from .prompt_loader import PromptLibrary
 from .quality import QualityGate
@@ -50,9 +50,36 @@ class CogAlpha:
     # Setup
     # ------------------------------------------------------------------ #
     def _load(self) -> pd.DataFrame:
+        """Load the configured OHLCV panel (parquet or CSV) as (date, ticker).
+
+        The panel is expected as a (date, ticker) MultiIndex with OHLCV columns;
+        CSV input may also carry `trade_date` / `ts_code` columns that are
+        normalized to a datetime date index here.
+        """
         if not self.cfg.data_path:
             raise ValueError("config.data_path must point to an OHLCV panel.")
-        return load_panel(self.cfg.data_path)
+
+        p = Path(self.cfg.data_path)
+        if p.suffix.lower() in (".parquet", ".pq"):
+            df = pd.read_parquet(p)
+        else:
+            df = pd.read_csv(p, parse_dates=False)
+
+        df.rename(columns={"trade_date": "date", "ts_code": "ticker"}, inplace=True)
+        if not isinstance(df.index, pd.MultiIndex):
+            if "date" in df.columns and "ticker" in df.columns:
+                df = df.set_index(["date", "ticker"]).sort_index()
+            else:
+                raise ValueError("Panel must have a (date, ticker) MultiIndex, or date+ticker columns.")
+
+        # Normalize the date level to a datetime index.
+        df = df.copy()
+        if not pd.api.types.is_datetime64_any_dtype(df.index.get_level_values("date")):
+            df.index = pd.MultiIndex.from_arrays(
+                [pd.to_datetime(df.index.get_level_values("date")), df.index.get_level_values("ticker")],
+                names=["date", "ticker"],
+            )
+        return df.sort_index()
 
     def _describe(self, df: pd.DataFrame) -> str:
         if self.cfg.llm.api_key or True:

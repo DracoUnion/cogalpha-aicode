@@ -1,15 +1,14 @@
-"""Data loading and column-description helpers.
+"""Column-description helpers.
 
-CogAlpha expects a daily OHLCV panel with a (date, ticker) MultiIndex. The
-`column_description` helper prompt turns raw column names into the concise
+The `column_description` helper prompt turns raw column names into the concise
 English descriptions that are injected into every generation prompt via the
-`{columns_desc}` placeholder.
+`{columns_desc}` placeholder. (Panel loading itself lives in
+`CogAlpha._load` in `search.py`.)
 """
 
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Dict, List, Optional
 
 import pandas as pd
@@ -18,44 +17,6 @@ from .llm_client import LLMClient
 from .prompt_loader import PromptLibrary
 
 logger = logging.getLogger(__name__)
-
-
-def load_panel(
-    path: str, 
-    date_col: str = 'trade_date',
-    ticker_col: str = 'ts_code',
-) -> pd.DataFrame:
-    """Load an OHLCV panel from parquet or CSV.
-
-    Expected index: MultiIndex (date, ticker). Columns typically include
-    open/high/low/close/volume. If the file is a CSV, the first two columns are
-    assumed to be date and ticker.
-    """
-    p = Path(path)
-    if p.suffix.lower() in (".parquet", ".pq"):
-        df = pd.read_parquet(p)
-    else:
-        df = pd.read_csv(p, parse_dates=False)
-
-    df.rename(columns={
-        date_col: "date",
-        ticker_col: "ticker",
-    }, inplace=True)
-    if not isinstance(df.index, pd.MultiIndex):
-        # df = df.reset_index()
-        if "date" in df.columns and "ticker" in df.columns:
-            df = df.set_index(["date", "ticker"]).sort_index()
-        else:
-            raise ValueError("Panel must have a (date, ticker) MultiIndex, or date+ticker columns.")
-    
-    # Normalize the date level to a datetime index.
-    df = df.copy()
-    if not pd.api.types.is_datetime64_any_dtype(df.index.get_level_values("date")):
-        df.index = pd.MultiIndex.from_arrays(
-            [pd.to_datetime(df.index.get_level_values("date")), df.index.get_level_values("ticker")],
-            names=["date", "ticker"],
-        )
-    return df.sort_index()
 
 
 def describe_columns(
