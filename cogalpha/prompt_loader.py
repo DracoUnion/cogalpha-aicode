@@ -24,6 +24,7 @@ the templates live in this module.
 
 from __future__ import annotations
 
+import re
 from typing import Dict, Optional, Tuple
 
 # --------------------------------------------------------------------------- #
@@ -1464,18 +1465,13 @@ _TOKEN_ALIASES: Dict[str, str] = {
 }
 
 
-def _render_placeholders(text: str, aliases: Dict[str, str], **values) -> str:
+def _render_placeholders(prompt: str, aliases: Dict[str, str], **kw) -> str:
     """Substitute `{placeholder}` tokens in `text` using `.replace()`.
 
     None/missing values render as an empty string; a keyword without a known
     token raises, so typo'd call sites fail loudly.
     """
-    for key, value in values.items():
-        token = aliases.get(key)
-        if token is None:
-            raise KeyError(f"Unsupported placeholder {key!r}")
-        text = text.replace(token, "" if value is None else str(value))
-    return text
+    return re.sub(r"{(\w+)}", lambda g: kw.get(g.group(1), g.group(0)), prompt)
 
 
 def _render_cot_block(template: str, cot: str) -> str:
@@ -1554,3 +1550,4 @@ class PromptLibrary:
     def build_evolution_prompt(self, agent_id: str, **kwargs) -> str:
         """Fill one evolution template's `{...}` placeholders."""
         return _render_placeholders(self.evolution_templates[agent_id], _TOKEN_ALIASES, **kwargs)
+
