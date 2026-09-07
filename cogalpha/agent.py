@@ -35,6 +35,11 @@ logger = logging.getLogger(__name__)
 
 MAX_REPAIR_ATTEMPTS_DEFAULT = 3
 
+# [function-N] ... [/function-N] blocks the LLM emits.
+_FUNC_BLOCK = re.compile(r"\[function\-\d+\]([\s\S]*?)\[/function-\d+\]", re.I)
+_DEF = re.compile(r"^\s*def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(df\)\s*:", re.M)
+_DOCSTRING = re.compile(r"\"\"\"(.*?)\"\"\"", re.S)
+
 
 def _render_placeholders(prompt: str, **kw) -> str:
     """Substitute `{placeholder}` tokens in `prompt` via ``re.sub``.
@@ -74,8 +79,21 @@ def _quality_issues(raw: str) -> List[str]:
 
 
 def _quality_corrected(raw: str) -> str:
-    funcs = executor.parse_generated_code(raw)
+    funcs = Agent.parse_generated_code(raw)
     return funcs[0].code if funcs else ""
+
+
+def _guess_name(block: str) -> str:
+    m = re.search(r"return\s+df_copy\[['\"]([^'\"]+)['\"]\]", block)
+    if m:
+        return m.group(1)
+    m = re.search(r"[A-Za-z_][A-Za-z0-9_]*\(", block)
+    return m.group(0).rstrip("(") if m else "factor_unknown"
+
+
+def _extract_docstring(code: str) -> str:
+    m = _DOCSTRING.search(code)
+    return m.group(1).strip() if m else ""
 
 
 class Agent:
@@ -167,7 +185,7 @@ class Agent:
         except Exception as exc:  # pragma: no cover - API dependent
             logger.error("generation call for %s failed: %s", agent_id, exc)
             return []
-        return executor.parse_generated_code(raw)
+        return self.parse_generated_code(raw)
 
     def _intro(
         self,
@@ -204,7 +222,7 @@ class Agent:
         except Exception as exc:  # pragma: no cover
             logger.error("mutation call failed: %s", exc)
             return []
-        return executor.parse_generated_code(raw)
+        return self.parse_generated_code(raw)
 
     def crossover(
         self,
@@ -229,7 +247,7 @@ class Agent:
         except Exception as exc:  # pragma: no cover
             logger.error("crossover call failed: %s", exc)
             return []
-        return executor.parse_generated_code(raw)
+        return self.parse_generated_code(raw)
 
     # ------------------------------------------------------------------ #
     # Quality checker (static + LLM agents)
@@ -268,7 +286,7 @@ class Agent:
             error=error,
         )
         raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
-        funcs = executor.parse_generated_code(raw)
+        funcs = self.parse_generated_code(raw)
         return funcs[0].code if funcs else old_code
 
     def logic_improve(self, old_code: str, feedback: str) -> str:
@@ -281,7 +299,7 @@ class Agent:
             dynamic_feedback=feedback,
         )
         raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
-        funcs = executor.parse_generated_code(raw)
+        funcs = self.parse_generated_code(raw)
         return funcs[0].code if funcs else old_code
 
     def check_code(self, code: str, name: str) -> str:
@@ -356,6 +374,22 @@ class Agent:
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
+    @staticmethod
+    def parse_generated_code(raw: str) -> List[ParsedFunction]:
+        """Extract `[function-N]` blocks from a generation response."""
+        out: List[ParsedFunction] = []
+        seen = set()
+        for match in _FUNC_BLOCK.finditer(raw):
+            block = match.group(1).strip()
+            dm = _DEF.search(block)
+            name = dm.group(1) if dm else _guess_name(block)
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            doc = _extract_docstring(block)
+            out.append(ParsedFunction(name=name, code=block, docstring=doc))
+        return out
+
     def describe_columns(self, df) -> str:
         """Turn the panel's column names into a `columns_desc` block.
 

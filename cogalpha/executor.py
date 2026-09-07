@@ -12,54 +12,14 @@ from __future__ import annotations
 
 import ast
 import logging
-import re
-from typing import List, Optional, Tuple
+from typing import List
 
 import numpy as np
 import pandas as pd
 
-from .models import Factor, ParsedFunction
+from .models import Factor
 
 logger = logging.getLogger(__name__)
-
-# Matches the `[function-N] ... [/function-N]` blocks the LLM emits.
-_FUNC_BLOCK = re.compile(
-    r"\[function\-\d+\]([\s\S]*?)\[/function-\d+\]", re.I
-)
-_DEF = re.compile(r"^\s*def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(df\)\s*:", re.M)
-_DOCSTRING = re.compile(r"\"\"\"(.*?)\"\"\"", re.S)
-
-
-# --------------------------------------------------------------------------- #
-# Parsing
-# --------------------------------------------------------------------------- #
-def parse_generated_code(raw: str) -> List[ParsedFunction]:
-    """Extract `[function-N]` blocks from a generation response."""
-    out: List[ParsedFunction] = []
-    seen = set()
-    for match in _FUNC_BLOCK.finditer(raw):
-        block = match.group(1).strip()
-        dm = _DEF.search(block)
-        name = dm.group(1) if dm else _guess_name(block)
-        if not name or name in seen:
-            continue
-        seen.add(name)
-        doc = _extract_docstring(block)
-        out.append(ParsedFunction(name=name, code=block, docstring=doc))
-    return out
-
-
-def _guess_name(block: str) -> str:
-    m = re.search(r"return\s+df_copy\[['\"]([^'\"]+)['\"]\]", block)
-    if m:
-        return m.group(1)
-    m = re.search(r"[A-Za-z_][A-Za-z0-9_]*\(", block)
-    return m.group(0).rstrip("(") if m else "factor_unknown"
-
-
-def _extract_docstring(code: str) -> str:
-    m = _DOCSTRING.search(code)
-    return m.group(1).strip() if m else ""
 
 
 # --------------------------------------------------------------------------- #
