@@ -217,20 +217,31 @@ class CogAlpha:
     # Main
     # ------------------------------------------------------------------ #
     def run(self) -> SearchResult:
+        self._step("1", "初始化随机种子（seed=%d）", self.cfg.generation.random_state)
         random.seed(self.cfg.generation.random_state)
+
+        self._step("2", "加载 OHLCV 数据面板")
         df = self._load()
+
+        self._step("3", "计算 %d 日前向收益标签", self.cfg.forecast_horizon)
         label = self.compute_label(df, self.cfg.forecast_horizon)
+
+        self._step("4", "生成列描述")
         columns_desc = self._describe(df)
         columns_num = len(df.columns)
+
+        self._step("5", "配置 Agent（%d 列）", columns_num)
         self.agent.columns_desc = columns_desc
         self.agent.columns_num = columns_num
 
         gen = self.cfg.generation
         agent_ids = self.agent.list_agents()
+        self._step("6", "枚举生成 agent（%d 个）", len(agent_ids))
 
         result = SearchResult()
 
         # --- Phase 1: build the initial parent pool. ---
+        self._step("7", "构建初始父池（目标 %d 个因子）", gen.initial_pool_size)
         parent_pool: List[Factor] = []
         attempts = 0
         while len(parent_pool) < gen.initial_pool_size and attempts < gen.initial_pool_size * 4:
@@ -250,25 +261,31 @@ class CogAlpha:
                 if f is not None and f.executable:
                     parent_pool.append(f)
             if attempts % 10 == 0:
-                self._logger.info("initial pool: %d/%d", len(parent_pool), gen.initial_pool_size)
+                self._step(f"7.{attempts}", "父池进度 %d/%d", len(parent_pool), gen.initial_pool_size)
 
         parent_pool = utils.rank_factors(parent_pool)[: gen.parent_pool_size]
         result.candidates = list(parent_pool)
         result.elite = list(parent_pool)
+        self._step(f"7.{attempts}", "初始父池完成：%d 个因子", len(parent_pool))
         self._log_pool("initial", parent_pool)
 
         # --- Phase 2: evolution searches over each agent. ---
+        self._step("8", "进化搜索（%d 次搜索 × %d 个 agent）", gen.evolution_searches, len(agent_ids))
         for search_idx in range(gen.evolution_searches):
-            for agent_id in agent_ids:
-                self._logger.info("== evolution search %d/%d, agent %s ==",
-                                  search_idx + 1, gen.evolution_searches, agent_id)
+            for a, agent_id in enumerate(agent_ids, 1):
+                self._step(f"8.{search_idx + 1}.{a}", "进化搜索 %d/%d，agent %s",
+                           search_idx + 1, gen.evolution_searches, agent_id)
                 level, _, _ = _AGENTS[agent_id]
                 parent_pool, result = self._evolve_agent(
-                    df, label, columns_desc, columns_num, agent_id, level, parent_pool, result
+                    df, label, columns_desc, columns_num, agent_id, level, parent_pool, result,
+                    step=f"8.{search_idx + 1}.{a}",
                 )
 
+        self._step("9", "排序最终候选 / 精英")
         result.candidates = utils.rank_factors(result.candidates)
         result.elite = utils.rank_factors(result.elite)
+
+        self._step("10", "保存结果")
         self._save(result)
         return result
 
@@ -285,11 +302,16 @@ class CogAlpha:
         level: str,
         parent_pool: List[Factor],
         result: SearchResult,
+        *,
+        step: str,
     ) -> tuple[List[Factor], SearchResult]:
         gen = self.cfg.generation
+
+        self._step(f"{step}.1", "携带前代精英（top %d）", gen.carry_elite_top)
         prev_elite = utils.rank_factors(result.elite)[: gen.carry_elite_top]
         feedback: FeedbackSummary = FeedbackSummary()
 
+        total_gens = gen.sub_loops * gen.generations_per_sub_loop
         for sub in range(gen.sub_loops):
             for g in range(gen.generations_per_sub_loop):
                 generation_idx = sub * gen.generations_per_sub_loop + g + 1
@@ -298,6 +320,7 @@ class CogAlpha:
                 children = self._breed(
                     df, label, columns_desc, columns_num,
                     agent_id, level, parent_pool, feedback, generation_idx,
+                    step=f"{step}.2.{generation_idx}",
                 )
 
                 # Inject qualified/elite children into the parent pool.
@@ -312,13 +335,14 @@ class CogAlpha:
                 if generation_idx % gen.inject_every == 0:
                     feedback = self._refresh_feedback(result.candidates)
 
-                self._logger.info(
-                    "  gen %d/%d: children=%d qualified=%d elite_total=%d",
-                    generation_idx, gen.sub_loops * gen.generations_per_sub_loop,
+                self._step(
+                    f"{step}.2.{generation_idx}", "第 %d/%d 代：children=%d qualified=%d elite=%d",
+                    generation_idx, total_gens,
                     len(children), sum(1 for c in children if c.qualified), len(result.elite),
                 )
 
         # Carry forward the previous elites to seed the next search.
+        self._step(f"{step}.3", "推进精英到下一轮搜索")
         current_top = utils.rank_factors(result.elite)[: gen.carry_elite_top]
         parent_pool = utils.rank_factors(parent_pool + prev_elite + current_top)[: gen.parent_pool_size]
         return parent_pool, result
@@ -330,6 +354,8 @@ class CogAlpha:
         self,
         df, label, columns_desc, columns_num,
         agent_id, level, parent_pool, feedback, generation_idx,
+        *,
+        step: str,
     ) -> List[Factor]:
         cfg = self.cfg
         gen = cfg.generation
@@ -338,9 +364,10 @@ class CogAlpha:
         new_factors: List[Factor] = []
         pool = utils.rank_factors(parent_pool)
 
-        for _ in range(max(1, gen.child_pool_size // max(1, len(parent_pool)))):
+        for round_idx in range(max(1, gen.child_pool_size // max(1, len(parent_pool)))):
             # Choose an evolution operation.
             op = random.choice(["generate", "mutation", "crossover", "crossover_then_mutation"])
+            logger.debug("[%s.%d] 繁殖操作：%s", step, round_idx + 1, op)
             candidates: List = []
 
             if op == "generate":
@@ -404,6 +431,13 @@ class CogAlpha:
             "[%s] pool size=%d top_ic=[%s]",
             tag, len(pool), ", ".join(f"{f.ic:.4f}" for f in top),
         )
+
+    def _step(self, seq: str, msg: str, *args) -> None:
+        """Log a run step as ``[seq] message``."""
+        if args:
+            self._logger.info("[%s] %s", seq, msg % args)
+        else:
+            self._logger.info("[%s] %s", seq, msg)
 
     # ------------------------------------------------------------------ #
     # Persistence
