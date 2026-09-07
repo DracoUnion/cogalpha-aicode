@@ -18,9 +18,9 @@ import re
 from typing import List, Optional, Tuple
 
 from . import executor
-from .llm_client import LLMClient
+from .llm import LLMClient
 from .models import CogAlphaConfig, FeedbackSummary, JudgeResult, ParsedFunction, QualityResult
-from .prompt_loader import (
+from .prompts import (
     _AGENTS,
     _COLUMN_DESCRIPTION,
     _EFFECTIVE_ANALYSIS,

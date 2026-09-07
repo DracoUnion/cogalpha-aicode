@@ -31,8 +31,8 @@ from . import executor, evaluator, selection
 from .agent import Agent
 from .models import CogAlphaConfig
 from .data_loader import build_column_desc_manual
-from .llm_client import LLMClient
-from .prompt_loader import _AGENTS
+from .llm import LLMClient
+from .prompts import _AGENTS
 from .models import Factor, FeedbackSummary, ParsedFunction, SearchResult
 
 logger = logging.getLogger(__name__)

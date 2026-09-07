@@ -26,7 +26,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from cogalpha.models import CogAlphaConfig  # noqa: E402
-from cogalpha.search import CogAlpha  # noqa: E402
+from cogalpha.main import CogAlpha  # noqa: E402
 
 
 def build_config(args: argparse.Namespace) -> CogAlphaConfig:

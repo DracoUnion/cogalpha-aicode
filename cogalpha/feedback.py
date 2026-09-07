@@ -14,8 +14,8 @@ import random
 import textwrap
 from typing import List
 
-from .llm_client import LLMClient
-from .prompt_loader import _EFFECTIVE_SUMMARY, _INEFFECTIVE_SUMMARY, _SYSTEM_MESSAGE
+from .llm import LLMClient
+from .prompts import _EFFECTIVE_SUMMARY, _INEFFECTIVE_SUMMARY, _SYSTEM_MESSAGE
 from .models import Factor, FeedbackSummary
 
 logger = logging.getLogger(__name__)
