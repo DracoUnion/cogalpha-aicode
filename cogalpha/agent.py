@@ -17,7 +17,7 @@ import logging
 import re
 from typing import List, Optional, Tuple
 
-from . import executor
+from . import utils
 from .llm import LLMClient
 from .models import CogAlphaConfig, FeedbackSummary, JudgeResult, ParsedFunction, QualityResult
 from .prompts import (
@@ -254,8 +254,8 @@ class Agent:
     # ------------------------------------------------------------------ #
     def static_check(self, code: str, name: str) -> List[str]:
         """Deterministic AST checks: nested loops, syntax, return column name."""
-        issues = executor.check_code_static(code, name)
-        issues += executor.validate_name(code, name)
+        issues = utils.check_code_static(code, name)
+        issues += utils.validate_name(code, name)
         return issues
 
     def judge(self, code: str) -> JudgeResult:

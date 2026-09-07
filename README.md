@@ -11,15 +11,11 @@ src/
 ├── requirements.txt
 └── cogalpha/
     ├── models.py           # 所有 dataclass 与 pydantic 模型（LLM/进化配置、Factor、质检输出、SearchResult）
-    ├── llm_client.py       # OpenAI 兼容客户端封装（chat + JSON 结构化输出）
-    ├── prompt_loader.py    # 从 prompts/ 解析并组装提示词
-    ├── data_loader.py      # 列描述手动回退 helper（LLM 版见 agent.describe_columns）
-    ├── executor.py         # 静态检查（AST 禁嵌套循环）+ 编译执行因子
-    ├── evaluator.py        # 标签 forward_returns + NaN 比例（IC/RankIC/ICIR/MI 见 CogAlpha.evaluate_factor）
-    ├── agent.py            # Agent 类（LLMClient）：提示词构建 + generate/mutate/crossover + 质量检查（原 QualityGate）
-    ├── feedback.py         # 自适应生成反馈（有效/无效因子摘要）
-    ├── selection.py        # 池排序 rank_factors（合格/精英分类见 CogAlpha.classify_factor）
-    └── search.py           # 主进化搜索编排器（CogAlpha 类：面板加载 + 流水线 + 搜索）
+    ├── llm.py              # OpenAI 兼容客户端封装（chat + JSON 结构化输出）
+    ├── prompts.py          # 模块级提示词常量与 21 个七级 agent 模板
+    ├── utils.py            # 列描述、标签/NaN、静态检查/执行、反馈、池排序
+    ├── agent.py            # Agent 类：提示词、生成/进化、质量检查、代码解析
+    └── main.py             # 主进化搜索编排器（CogAlpha：面板加载 + 流水线 + 搜索）
 ```
 
 ## 运行
@@ -45,7 +41,7 @@ python run.py --data data.parquet --horizon 10 --output ./out --model gpt-4o-min
 
 ## 关键设计
 
-- **提示词组装**：`prompt_loader` 以模块常量形式内嵌全部提示词（21 个七级智能体的
+- **提示词组装**：`prompts` 以模块常量形式内嵌全部提示词（21 个七级智能体的
   intro + guidance 与共享模块 requirements / libraries / output_format /
   system_message / 反馈分析等），组装与占位符替换由 `agent.Agent` 完成。
 - **LLM 调用**：生成/进化智能体从 `{0.7,…,1.2}` 均匀抽样温度；质量检查器固定 0.8；

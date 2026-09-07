@@ -26,11 +26,9 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from . import feedback as feedback_mod
-from . import executor, evaluator, selection
+from . import utils
 from .agent import Agent
 from .models import CogAlphaConfig
-from .data_loader import build_column_desc_manual
 from .llm import LLMClient
 from .prompts import _AGENTS
 from .models import Factor, FeedbackSummary, ParsedFunction, SearchResult
@@ -159,14 +157,14 @@ class CogAlpha:
             return self.agent.describe_columns(df)
         except Exception as exc:  # pragma: no cover - API dependent
             self._logger.warning("column_description failed: %s; using manual block", exc)
-        return build_column_desc_manual(list(df.columns))
+        return utils.build_column_desc_manual(list(df.columns))
 
     # ------------------------------------------------------------------ #
     # Pipeline (gate -> execute -> evaluate -> classify)
     # ------------------------------------------------------------------ #
     def compute_label(self, data: pd.DataFrame, horizon: int, price_col: str = "open") -> pd.Series:
         """Forward-return labels used as the fitness target."""
-        return evaluator.forward_returns(data, horizon, price_col)
+        return utils.forward_returns(data, horizon, price_col)
 
     def evaluate_factor(
         self, factor: pd.Series, label: pd.Series, mi: bool = True
@@ -265,7 +263,7 @@ class CogAlpha:
             factor.accepted_by_judge = False
             return None
         factor.executable = True
-        factor.nan_ratio = evaluator.nan_ratio(series)
+        factor.nan_ratio = utils.nan_ratio(series)
         if factor.nan_ratio > self.cfg.generation.max_nan_ratio:
             logger.debug("Factor %s NaN ratio %.2f too high; dropping.", factor.name, factor.nan_ratio)
             return None
@@ -278,12 +276,12 @@ class CogAlpha:
 
     def _execute(self, factor: Factor, data: pd.DataFrame) -> Optional[pd.Series]:
         try:
-            func = executor.compile_factor(factor.code)
+            func = utils.compile_factor(factor.code)
         except Exception as exc:  # pragma: no cover - compile errors
             logger.info("Factor %s failed to compile: %s", factor.name, exc)
             return None
         try:
-            return executor.apply_factor(data, func, factor.name)
+            return utils.apply_factor(data, func, factor.name)
         except Exception as exc:
             logger.info("Factor %s failed to execute: %s", factor.name, exc)
             return None
@@ -327,7 +325,7 @@ class CogAlpha:
             if attempts % 10 == 0:
                 self._logger.info("initial pool: %d/%d", len(parent_pool), gen.initial_pool_size)
 
-        parent_pool = selection.rank_factors(parent_pool)[: gen.parent_pool_size]
+        parent_pool = utils.rank_factors(parent_pool)[: gen.parent_pool_size]
         result.candidates = list(parent_pool)
         result.elite = list(parent_pool)
         self._log_pool("initial", parent_pool)
@@ -342,8 +340,8 @@ class CogAlpha:
                     df, label, columns_desc, columns_num, agent_id, level, parent_pool, result
                 )
 
-        result.candidates = selection.rank_factors(result.candidates)
-        result.elite = selection.rank_factors(result.elite)
+        result.candidates = utils.rank_factors(result.candidates)
+        result.elite = utils.rank_factors(result.elite)
         self._save(result)
         return result
 
@@ -362,7 +360,7 @@ class CogAlpha:
         result: SearchResult,
     ) -> tuple[List[Factor], SearchResult]:
         gen = self.cfg.generation
-        prev_elite = selection.rank_factors(result.elite)[: gen.carry_elite_top]
+        prev_elite = utils.rank_factors(result.elite)[: gen.carry_elite_top]
         feedback: FeedbackSummary = FeedbackSummary()
 
         for sub in range(gen.sub_loops):
@@ -394,8 +392,8 @@ class CogAlpha:
                 )
 
         # Carry forward the previous elites to seed the next search.
-        current_top = selection.rank_factors(result.elite)[: gen.carry_elite_top]
-        parent_pool = selection.rank_factors(parent_pool + prev_elite + current_top)[: gen.parent_pool_size]
+        current_top = utils.rank_factors(result.elite)[: gen.carry_elite_top]
+        parent_pool = utils.rank_factors(parent_pool + prev_elite + current_top)[: gen.parent_pool_size]
         return parent_pool, result
 
     # ------------------------------------------------------------------ #
@@ -411,7 +409,7 @@ class CogAlpha:
         num_per = gen.num_per_request
         horizon = cfg.forecast_horizon
         new_factors: List[Factor] = []
-        pool = selection.rank_factors(parent_pool)
+        pool = utils.rank_factors(parent_pool)
 
         for _ in range(max(1, gen.child_pool_size // max(1, len(parent_pool)))):
             # Choose an evolution operation.
@@ -457,7 +455,7 @@ class CogAlpha:
     # ------------------------------------------------------------------ #
     @staticmethod
     def _inject(parent_pool: List[Factor], children: List[Factor], cap: int) -> List[Factor]:
-        merged = selection.rank_factors(parent_pool + children)
+        merged = utils.rank_factors(parent_pool + children)
         return merged[:cap]
 
     def _refresh_feedback(self, candidates: List[Factor]) -> FeedbackSummary:
@@ -465,16 +463,16 @@ class CogAlpha:
         if not candidates:
             return FeedbackSummary()
         valid = [c for c in candidates if c.ic is not None]
-        effective = selection.rank_factors(valid)[: cfg.feedback.top_effective]
-        ineffective = selection.rank_factors(valid, key="ic")[-cfg.feedback.worst_ineffective:] if valid else []
+        effective = utils.rank_factors(valid)[: cfg.feedback.top_effective]
+        ineffective = utils.rank_factors(valid, key="ic")[-cfg.feedback.worst_ineffective:] if valid else []
         try:
-            return feedback_mod.build_feedback(effective, ineffective, self.llm)
+            return utils.build_feedback(effective, ineffective, self.llm)
         except Exception as exc:  # pragma: no cover - API dependent
             self._logger.warning("feedback build failed: %s", exc)
-            return feedback_mod.deterministic_build_feedback(effective, ineffective)
+            return utils.deterministic_build_feedback(effective, ineffective)
 
     def _log_pool(self, tag: str, pool: List[Factor]) -> None:
-        top = selection.rank_factors(pool)[:3]
+        top = utils.rank_factors(pool)[:3]
         self._logger.info(
             "[%s] pool size=%d top_ic=[%s]",
             tag, len(pool), ", ".join(f"{f.ic:.4f}" for f in top),

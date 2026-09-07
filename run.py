@@ -96,8 +96,7 @@ def synthetic_panel(days: int = 600, tickers: int = 40, seed: int = 0) -> pd.Dat
 
 def run_demo(args: argparse.Namespace) -> None:
     """Offline end-to-end exercise using a stub LLM and synthetic data."""
-    from cogalpha import selection
-    from cogalpha.data_loader import build_column_desc_manual
+    from cogalpha import utils
     from cogalpha.models import ParsedFunction
 
     cfg = build_config(args)
@@ -109,7 +108,7 @@ def run_demo(args: argparse.Namespace) -> None:
     df = synthetic_panel()
     engine = CogAlpha(cfg)  # no API calls made (cfg.use_llm is False)
     label = engine.compute_label(df, cfg.forecast_horizon)
-    columns_desc = build_column_desc_manual(list(df.columns))
+    columns_desc = utils.build_column_desc_manual(list(df.columns))
     columns_num = len(df.columns)
     engine.agent.columns_desc = columns_desc
     engine.agent.columns_num = columns_num
@@ -129,7 +128,7 @@ def run_demo(args: argparse.Namespace) -> None:
             parent_pool.append(f)
             print(f"  [ok] {f.name:24s} {f.summary()}")
 
-    parent_pool = selection.rank_factors(parent_pool)
+    parent_pool = utils.rank_factors(parent_pool)
     print(f"\nParent pool: {len(parent_pool)} factors")
     print("Top-3 by IC:")
     for f in parent_pool[:3]:
@@ -138,16 +137,16 @@ def run_demo(args: argparse.Namespace) -> None:
 
 
 def run_selftest() -> int:
-    from cogalpha import executor
+    from cogalpha import utils
     from cogalpha.agent import Agent
 
     code = _DEMO_FACTORS[0]
-    issues = executor.check_code_static(code, "factor_mom_ret5")
+    issues = utils.check_code_static(code, "factor_mom_ret5")
     assert not issues, issues
     bad = "def f(df):\n    for i in range(3):\n        for j in range(3):\n            pass"
-    assert any("Nested loop" in i for i in executor.check_code_static(bad, "f"))
+    assert any("Nested loop" in i for i in utils.check_code_static(bad, "f"))
     bad2 = "def g(df):\n    while True:\n        pass"
-    assert any("infinite" in i for i in executor.check_code_static(bad2, "g"))
+    assert any("infinite" in i for i in utils.check_code_static(bad2, "g"))
 
     parsed = Agent.parse_generated_code(
         "[function-1]\ndef x(df):\n    df_copy = df.copy()\n    return df_copy['x']\n[/function-1]"

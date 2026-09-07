@@ -236,8 +236,8 @@ class SearchResult:
     history: Dict[str, List[float]] = field(default_factory=dict)
 
     def best(self, key: str = "ic", k: int = 10) -> List[Factor]:
-        # Imported lazily so `models` never imports `selection` at module load
-        # (selection itself imports Factor from this module).
-        from .selection import rank_factors
+        # Imported lazily so `models` never imports `utils` at module load
+        # (utils itself imports Factor from this module).
+        from .utils import rank_factors
 
         return rank_factors(self.elite or self.candidates, key)[:k]
