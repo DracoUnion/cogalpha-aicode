@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import logging
 import random
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -28,24 +27,14 @@ import pandas as pd
 from . import evolution as evolution_agents
 from . import feedback as feedback_mod
 from . import generation, pipeline, selection
-from .config import CogAlphaConfig
+from .models import CogAlphaConfig
 from .data_loader import build_column_desc_manual, describe_columns, load_panel
 from .llm_client import LLMClient
 from .prompt_loader import PromptLibrary
 from .quality import QualityGate
-from .schemas import Factor, FeedbackSummary
+from .models import Factor, FeedbackSummary, SearchResult
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class SearchResult:
-    candidates: List[Factor] = field(default_factory=list)
-    elite: List[Factor] = field(default_factory=list)
-    history: Dict[str, List[float]] = field(default_factory=dict)
-
-    def best(self, key: str = "ic", k: int = 10) -> List[Factor]:
-        return selection.rank_factors(self.elite or self.candidates, key)[:k]
 
 
 class CogAlpha:

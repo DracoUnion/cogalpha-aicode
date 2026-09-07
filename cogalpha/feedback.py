@@ -16,7 +16,7 @@ from typing import List
 
 from .llm_client import LLMClient
 from .prompt_loader import PromptLibrary
-from .schemas import Factor, FeedbackSummary
+from .models import Factor, FeedbackSummary
 
 logger = logging.getLogger(__name__)
 

@@ -11,8 +11,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from .config import EvaluationSettings
-from .schemas import Factor
+from .models import EvaluationSettings, Factor
 
 logger = logging.getLogger(__name__)
 

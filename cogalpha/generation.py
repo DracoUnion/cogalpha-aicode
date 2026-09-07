@@ -14,7 +14,7 @@ from typing import List, Optional
 from . import executor
 from .llm_client import LLMClient
 from .prompt_loader import PromptLibrary
-from .schemas import FeedbackSummary, ParsedFunction
+from .models import FeedbackSummary, ParsedFunction
 
 logger = logging.getLogger(__name__)
 

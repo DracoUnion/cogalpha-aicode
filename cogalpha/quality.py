@@ -18,10 +18,10 @@ import logging
 from typing import List, Optional
 
 from . import executor
-from .config import CogAlphaConfig
+from .models import CogAlphaConfig
 from .llm_client import LLMClient
 from .prompt_loader import PromptLibrary
-from .schemas import JudgeResult, QualityResult
+from .models import JudgeResult, QualityResult
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +184,7 @@ def gate_factor(
 
     # 2) Judge.
     if use_judge and gate.cfg.use_llm:
-        from .schemas import Factor
+        from .models import Factor
 
         try:
             jr = gate.judge(current)

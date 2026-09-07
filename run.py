@@ -25,7 +25,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from cogalpha.config import CogAlphaConfig  # noqa: E402
+from cogalpha.models import CogAlphaConfig  # noqa: E402
 from cogalpha.llm_client import LLMClient  # noqa: E402
 from cogalpha.search import CogAlpha  # noqa: E402
 
@@ -102,7 +102,7 @@ def run_demo(args: argparse.Namespace) -> None:
     from cogalpha.data_loader import build_column_desc_manual
     from cogalpha.prompt_loader import PromptLibrary
     from cogalpha.quality import QualityGate
-    from cogalpha.schemas import ParsedFunction
+    from cogalpha.models import ParsedFunction
 
     cfg = build_config(args)
     cfg.data_path = ""

@@ -13,9 +13,9 @@ from typing import Optional
 import pandas as pd
 
 from . import executor, evaluator, selection
-from .config import CogAlphaConfig
+from .models import CogAlphaConfig
 from .quality import QualityGate
-from .schemas import Factor, ParsedFunction
+from .models import Factor, ParsedFunction
 
 logger = logging.getLogger(__name__)
 

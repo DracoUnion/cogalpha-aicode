@@ -16,7 +16,7 @@ from typing import List, Optional, Type, TypeVar
 
 from pydantic import BaseModel
 
-from .config import CogAlphaConfig
+from .models import CogAlphaConfig
 
 logger = logging.getLogger(__name__)
 

@@ -18,7 +18,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from .schemas import Factor, ParsedFunction
+from .models import Factor, ParsedFunction
 
 logger = logging.getLogger(__name__)
 

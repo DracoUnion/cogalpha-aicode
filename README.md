@@ -10,8 +10,7 @@ src/
 ├── run.py                  # 命令行入口（--demo / --self-test / 真实运行）
 ├── requirements.txt
 └── cogalpha/
-    ├── config.py           # pydantic 配置（LLM、进化规模、评估阈值）
-    ├── schemas.py          # 数据模型（Factor、质量检查器结构化输出等）
+    ├── models.py           # 所有 dataclass 与 pydantic 模型（LLM/进化配置、Factor、质检输出、SearchResult）
     ├── llm_client.py       # OpenAI 兼容客户端封装（chat + JSON 结构化输出）
     ├── prompt_loader.py    # 从 prompts/ 解析并组装提示词
     ├── data_loader.py      # 载入 OHLCV 面板、列描述

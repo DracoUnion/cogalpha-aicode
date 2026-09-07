@@ -12,10 +12,10 @@ import logging
 from typing import List, Optional
 
 from . import executor
-from .config import CogAlphaConfig
+from .models import CogAlphaConfig
 from .llm_client import LLMClient
 from .prompt_loader import PromptLibrary
-from .schemas import ParsedFunction
+from .models import ParsedFunction
 
 logger = logging.getLogger(__name__)
 
