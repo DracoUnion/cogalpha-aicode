@@ -22,9 +22,9 @@ from .schemas import Factor, ParsedFunction
 
 logger = logging.getLogger(__name__)
 
-# Matches the `<<function N>> ... <</function N>>` blocks the LLM emits.
+# Matches the `[function-N] ... [/function-N]` blocks the LLM emits.
 _FUNC_BLOCK = re.compile(
-    r"<<function\s*\d*\s*>>\s*(.*?)\s*<</function\s*\d*\s*>>", re.S | re.I
+    r"\[function\-\d+\]([\s\S]*?)\[/function-\d+\]", re.I
 )
 _DEF = re.compile(r"^\s*def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(df\)\s*:", re.M)
 _DOCSTRING = re.compile(r"\"\"\"(.*?)\"\"\"", re.S)
@@ -34,7 +34,7 @@ _DOCSTRING = re.compile(r"\"\"\"(.*?)\"\"\"", re.S)
 # Parsing
 # --------------------------------------------------------------------------- #
 def parse_generated_code(raw: str) -> List[ParsedFunction]:
-    """Extract `<<function N>>` blocks from a generation response."""
+    """Extract `[function-N]` blocks from a generation response."""
     out: List[ParsedFunction] = []
     seen = set()
     for match in _FUNC_BLOCK.finditer(raw):

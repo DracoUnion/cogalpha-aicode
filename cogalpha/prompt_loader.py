@@ -78,19 +78,19 @@ _OUTPUT_FORMAT = """### Output format specification:
 
 - Do NOT use markdown (like ```python)
 - Do NOT add explanation or comments outside the function
-- Each function must be wrapped inside: `<<function N>>` ... `<</function N>>`
+- Each function must be wrapped inside: `[function-N]` ... `[/function-N]`
 - All generated code must be executable and numerically stable.
 - Always define intermediate columns (e.g. df_copy['x']) before referencing them later.
 - The returned Series **must be named exactly the same as the function name**.
 - Each function should follow this format:
 
-<<function N>>
+[function-N]
 def factor_xyz(df):
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
     # factor computation
     return df_copy['factor_xyz']
-<</function N>>"""
+[/function-N]"""
 
 _BASE_FACTOR_GUIDANCE = """### Factor Design Guidance:
 
@@ -134,13 +134,13 @@ _EFFECTIVE_SUMMARY = """You are given several factor functions in the format:
             State: valid
             Metrics: IC / RankIC / ICIR / RankICIR
             Code:
-            <<function N>>
+            [function-N]
                 def <factor_name>(df):
                     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
                     df_copy = df.copy()
                     # factor computation
                     return df_copy['<factor_name>']
-            <</function N>>
+            [/function-N]
             <</factor N>>
 
             You are tasked with analyzing the given financial factors. For each factor, provide the following in a clear and structured format:
@@ -163,13 +163,13 @@ _INEFFECTIVE_SUMMARY = """You are given several factor functions in the format:
             State: low_metrics / dependent / unstable
             Metrics: IC / RankIC / ICIR / RankICIR
             Code:
-            <<function N>>
+            [function-N]
                 def <factor_name>(df):
                     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
                     df_copy = df.copy()
                     # factor computation
                     return df_copy['<factor_name>']
-            <</function N>>
+            [/function-N]
             <</factor N>>
 
             You are tasked with analyzing the given financial factors. For each factor, provide the following in a clear and structured format:
@@ -802,7 +802,7 @@ Remember: **Simple factors are often the most powerful and stable.**
 - Before generating the code, provide detailed instructions on how to fix the issues raised.
 - Do NOT use markdown (like ```python)
 - Do NOT add explanation or comments outside the function
-- Each function must be wrapped inside: `<<function N>>` ... `<</function N>>`
+- Each function must be wrapped inside: `[function-N]` ... `[/function-N]`
 - All generated code must be executable and numerically stable.
 - Always define intermediate columns (e.g. df_copy['x']) before referencing them later.
 - The returned Series must match the function name exactly.
@@ -827,13 +827,13 @@ Remember: **Simple factors are often the most powerful and stable.**
 
 - Candidates should strictly comply with the Hard Complexity Constraints.
 - Each function should follow this format:
-<<function N>>
+[function-N]
 def factor_xyz(df):
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
     # factor computation
     return df_copy['factor_xyz']
-<</function N>>
+[/function-N]
 
 ### Please format your response strictly as:
 
@@ -847,13 +847,13 @@ def factor_xyz(df):
 1. List each issue found (use bullet points).
 2. Output the corrected function using the exact format below:
 
-    <<function N>>
+    [function-N]
     def factor_xyz(df):
         \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
         df_copy = df.copy()
         # factor computation
         return df_copy['factor_xyz']
-    <</function N>>"""
+    [/function-N]"""
 
 _QUALITY_REPAIR_AGENT = """You are an expert interaction factor engineer. Below is the schema of the input DataFrame and a list of {columns_num} existing factors:
 
@@ -957,19 +957,19 @@ Coding Guidelines:
 - Before generating the code, provide detailed instructions on how to fix the issues raised.
 - Do NOT use markdown (like ```python)
 - Do NOT add explanation or comments outside the function
-- Each function must be wrapped inside: `<<function N>>` ... `<</function N>>`
+- Each function must be wrapped inside: `[function-N]` ... `[/function-N]`
 - All generated code must be executable and numerically stable.
 - Always define intermediate columns (e.g. df_copy['x']) before referencing them later.
 - The returned Series **must be named exactly the same as the function name**.
 - Each function should follow this format:
 
-<<function N>>
+[function-N]
 def factor_xyz(df):
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
     # factor computation
     return df_copy['factor_xyz']
-<</function N>>"""
+[/function-N]"""
 
 _QUALITY_JUDGE_AGENT = """You are an expert quantitative researcher and alpha factor reviewer for a professional factor research team.
 
@@ -1134,19 +1134,19 @@ Coding Guidelines:
 - Before generating the code, provide detailed instructions on how to fix the issues raised.
 - Do NOT use markdown (like ```python)
 - Do NOT add explanation or comments outside the function
-- Each function must be wrapped inside: `<<function N>>` ... `<</function N>>`
+- Each function must be wrapped inside: `[function-N]` ... `[/function-N]`
 - All generated code must be executable and numerically stable.
 - Always define intermediate columns (e.g. df_copy['x']) before referencing them later.
 - The returned Series **must be named exactly the same as the function name**.
 - Each function should follow this format:
 
-<<function N>>
+[function-N]
 def factor_xyz(df):
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
     # factor computation
     return df_copy['factor_xyz']
-<</function N>>"""
+[/function-N]"""
 
 _QUALITY: Dict[str, str] = {
     'code_quality_agent': _QUALITY_CODE_AGENT,
@@ -1266,19 +1266,19 @@ Coding Guidelines:
 - Candidates should strictly comply with the Hard Complexity Constraints.
 - Do NOT use markdown (like ```python)
 - Do NOT add explanation or comments outside the function
-- Each function must be wrapped inside: `<<function N>>` ... `<</function N>>`
+- Each function must be wrapped inside: `[function-N]` ... `[/function-N]`
 - All generated code must be executable and numerically stable.
 - Always define intermediate columns (e.g. df_copy['x']) before referencing them later.
 - The returned Series **must be named exactly the same as the function name**
 - Each function should follow this format:
 
-<<function N>>
+[function-N]
 def factor_xyz(df):
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
     # factor computation
     return df_copy['factor_xyz']
-<</function N>>"""
+[/function-N]"""
 
 _EVOLUTION_CROSSOVER = """You are an expert quantitative factor engineer specialized in **factor evolution and crossover design**.
 
@@ -1388,19 +1388,19 @@ Coding Guidelines:
 - Candidates should strictly comply with the Hard Complexity Constraints.
 - Do NOT use markdown (like ```python)
 - Do NOT add explanation or comments outside the function
-- Each function must be wrapped inside: `<<function N>>` ... `<</function N>>`
+- Each function must be wrapped inside: `[function-N]` ... `[/function-N]`
 - All generated code must be executable and numerically stable.
 - Always define intermediate columns (e.g. df_copy['x']) before referencing them later.
 - The returned Series **must be named exactly the same as the function name**
 - Each function should follow this format:
 
-<<function N>>
+[function-N]
 def factor_xyz(df):
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
     # factor computation
     return df_copy['factor_xyz']
-<</function N>>"""
+[/function-N]"""
 
 _EVOLUTION: Dict[str, str] = {
     'mutation_agent': _EVOLUTION_MUTATION,
