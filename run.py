@@ -167,7 +167,6 @@ def main() -> int:
     openai_tti_model = os.environ.get('OPENAI_TTI_MODEL', '')
 
     parser = argparse.ArgumentParser(description="CogAlpha: LLM-driven code-based alpha evolution")
-    parser.add_argument("-v", "--version", action="version", version=f"PYBP version: {__version__}")
     parser.add_argument("-m", "--model", default=openai_model, help="model name")
     parser.add_argument("-k", "--key", default=openai_key, help="OpenAI API key")
     parser.add_argument("-r", "--retry", type=int, default=1_000_000, help="times of retry")
