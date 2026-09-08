@@ -82,7 +82,7 @@ class LLMClient:
         return call_llm_retry(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             model or self.model,
-            temperature=temperature,
+            temp=temperature,
         )
 
     def complete_quality(
@@ -97,7 +97,7 @@ class LLMClient:
         return call_llm_retry(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             model=model or self.quality_model,
-            temperature=temperature if temperature is not None else self.quality_temperature,
+            temp=temperature if temperature is not None else self.quality_temperature,
         )
 
     def complete_json(
@@ -115,7 +115,7 @@ class LLMClient:
         return call_llm_retry(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             model=model_name or self.quality_model,
-            temperature=temperature if temperature is not None else self.quality_temperature,
+            temp=temperature if temperature is not None else self.quality_temperature,
             parse_output=parse_output,
         )
 
