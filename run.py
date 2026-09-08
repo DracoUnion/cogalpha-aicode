@@ -33,11 +33,11 @@ from cogalpha.openai import set_openai_props
 
 def build_config(args: argparse.Namespace) -> CogAlphaConfig:
     cfg = CogAlphaConfig()
-    if args.api_key:
+    if args.key:
         cfg.llm.api_key = args.key
     if args.model:
         cfg.llm.model = args.model
-    if args.base_url:
+    if args.host:
         cfg.llm.base_url = args.host
     cfg.data_path = args.data
     cfg.forecast_horizon = args.horizon
