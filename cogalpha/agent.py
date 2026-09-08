@@ -426,7 +426,7 @@ class Agent:
         """A chat completion from a quality-checker agent (fixed temperature)."""
         return call_llm_retry(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            model=model or self.cfg.llm.quality_model,
+            model or self.cfg.llm.quality_model,
             temp=temperature if temperature is not None else self.cfg.llm.quality_temperature,
         )
 
@@ -444,7 +444,7 @@ class Agent:
             model.model_validate_json(ext_code_block(s))
         return call_llm_retry(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            model=model_name or self.cfg.llm.quality_model,
+            model_name or self.cfg.llm.quality_model,
             temp=temperature if temperature is not None else self.cfg.llm.quality_temperature,
             parse_output=parse_output,
         )
