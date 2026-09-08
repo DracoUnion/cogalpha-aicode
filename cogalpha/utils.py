@@ -24,7 +24,6 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from .llm import LLMClient
 from .models import Factor, FeedbackSummary, ParsedFunction
 from .prompts import _EFFECTIVE_SUMMARY, _INEFFECTIVE_SUMMARY, _SYSTEM_MESSAGE
 
@@ -354,3 +353,7 @@ def rank_factors(factors: List[Factor], key: str = "ic") -> List[Factor]:
 def _safe(f: Factor, key: str) -> float:
     v = getattr(f, key, None)
     return float(v) if v is not None else -1e9
+
+
+def render_prompt(prompt: str, **kw):
+    return re.sub(r"{(\w+)}", lambda g: kw.get(g.group(1), g.group(0)), prompt)
