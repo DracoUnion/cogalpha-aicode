@@ -65,57 +65,5 @@ class LLMClient:
         content = resp.choices[0].message.content or ""
         return content.strip()
 
-    # ------------------------------------------------------------------ #
-    # Public helpers
-    # ------------------------------------------------------------------ #
-    def complete(
-        self,
-        system: str,
-        user: str,
-        *,
-        temperature: Optional[float] = None,
-        model: Optional[str] = None,
-    ) -> str:
-        """A single chat completion; temperature defaults to a random gen value."""
-        if temperature is None:
-            temperature = random.choice(self.gen_temperatures)
-        return call_llm_retry(
-            [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            model or self.model,
-            temp=temperature,
-        )
 
-    def complete_quality(
-        self,
-        system: str,
-        user: str,
-        *,
-        temperature: Optional[float] = None,
-        model: Optional[str] = None,
-    ) -> str:
-        """A chat completion from a quality-checker agent (fixed temperature)."""
-        return call_llm_retry(
-            [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            model=model or self.quality_model,
-            temp=temperature if temperature is not None else self.quality_temperature,
-        )
-
-    def complete_json(
-        self,
-        system: str,
-        user: str,
-        model: BaseModel,
-        *,
-        temperature: Optional[float] = None,
-        model_name: Optional[str] = None,
-    ) -> T:
-        """Ask the model to return a JSON object and coerce it into `model`."""
-        parse_output = lambda s: \
-            model.model_validate_json(ext_code_block(s))
-        return call_llm_retry(
-            [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            model=model_name or self.quality_model,
-            temp=temperature if temperature is not None else self.quality_temperature,
-            parse_output=parse_output,
-        )
 

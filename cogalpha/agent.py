@@ -16,11 +16,13 @@ from __future__ import annotations
 import logging
 import random
 from typing import List, Optional, Tuple
+from pydantic import BaseModel
 
 from . import utils
 from .llm import LLMClient
 from .models import CogAlphaConfig, FeedbackSummary, JudgeResult, ParsedFunction, QualityResult, Factor
-from .utils import _render_examples
+from .openai import call_llm_retry
+from .utils import _render_examples, ext_code_block
 from .prompts import (
     _AGENTS,
     _COLUMN_DESCRIPTION,
@@ -396,3 +398,57 @@ class Agent:
         effective_CoT = effective_CoT[:2000]
         ineffective_CoT = ineffective_CoT[:2000]
         return FeedbackSummary(effective=effective_CoT, ineffective=ineffective_CoT)
+
+    # ------------------------------------------------------------------ #
+    # Public helpers
+    # ------------------------------------------------------------------ #
+    def complete(
+        self,
+        system: str,
+        user: str,
+        *,
+        temperature: Optional[float] = None,
+        model: Optional[str] = None,
+    ) -> str:
+        """A single chat completion; temperature defaults to a random gen value."""
+        if temperature is None:
+            temperature = random.choice(self.cfg.llm.gen_temperatures)
+        return call_llm_retry(
+            [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            model or self.cfg.llm.model,
+            temp=temperature,
+        )
+
+    def complete_quality(
+        self,
+        system: str,
+        user: str,
+        *,
+        temperature: Optional[float] = None,
+        model: Optional[str] = None,
+    ) -> str:
+        """A chat completion from a quality-checker agent (fixed temperature)."""
+        return call_llm_retry(
+            [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            model=model or self.cfg.llm.quality_model,
+            temp=temperature if temperature is not None else self.cfg.llm.quality_temperature,
+        )
+
+    def complete_json(
+        self,
+        system: str,
+        user: str,
+        model: BaseModel,
+        *,
+        temperature: Optional[float] = None,
+        model_name: Optional[str] = None,
+    ) -> T:
+        """Ask the model to return a JSON object and coerce it into `model`."""
+        parse_output = lambda s: \
+            model.model_validate_json(ext_code_block(s))
+        return call_llm_retry(
+            [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            model=model_name or self.cfg.llm.quality_model,
+            temp=temperature if temperature is not None else self.cfg.llm.quality_temperature,
+            parse_output=parse_output,
+        )
