@@ -22,6 +22,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import os
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -159,13 +160,35 @@ def run_selftest() -> int:
 
 
 def main() -> int:
+    openai_key = os.environ.get('OPENAI_API_KEY')
+    openai_url = os.environ.get('OPENAI_BASE_URL')
+    openai_model = os.environ.get('OPENAI_CHAT_MODEL', 'gpt-3.5-turbo')
+    openai_vmodel = os.environ.get('OPENAI_VIS_MODEL', '')
+    openai_tti_model = os.environ.get('OPENAI_TTI_MODEL', '')
+
     parser = argparse.ArgumentParser(description="CogAlpha: LLM-driven code-based alpha evolution")
+    parser.add_argument("-v", "--version", action="version", version=f"PYBP version: {__version__}")
+    parser.add_argument("-m", "--model", default=openai_model, help="model name")
+    parser.add_argument("-k", "--key", default=openai_key, help="OpenAI API key")
+    parser.add_argument("-r", "--retry", type=int, default=1_000_000, help="times of retry")
+    parser.add_argument("-tm", "--temp", type=float, default=1, help="temperature")
+    parser.add_argument("-tp", "--top-p", type=float, help="top p")
+    parser.add_argument("-fp", "--frequency-penalty", type=float, help="frequency penalty")
+    parser.add_argument("-pp", "--presence-penalty", type=float, help="presence penalty")
+    parser.add_argument("-mt", "--max-tokens", type=int, default=None, help="max tokens")
+    parser.add_argument("-H", "--host", default=openai_url, help="api host")
+    parser.add_argument("--emb", default=os.environ.get('EMB_MODEL_PATH', 'moka-ai/m3e-base'), help="emb model path")
+    parser.add_argument("-vm", "--vmodel", default=openai_vmodel, help="vision model name")
+    parser.add_argument("-im", "--tti-model", default=openai_tti_model, help="vision model name")
+    parser.add_argument("-ua", "--user-agent", default='claude-cli/2.1.41 (external, cli)', help="HTTP User-Agent Header")
+    parser.add_argument("-st", "--stream", action='store_true' , help="stream mode")
+    parser.add_argument("-eb", "--extra-body", help="extra body")
+    parser.add_argument("-ct", "--conn-timeout", type=int, default=60, help="")
+    parser.add_argument("-rt", "--read-timeout", type=int, default=120, help="")
+    parser.add_argument("-rr", "--repetition-regex", default='', help="re for repetition detection")
     parser.add_argument("--data", default="", help="Path to OHLCV panel (parquet/csv) with (date,ticker) index.")
     parser.add_argument("--horizon", type=int, default=10, help="Forecast horizon in days (paper: 10).")
     parser.add_argument("--output", default="./cogalpha_output", help="Output directory.")
-    parser.add_argument("--model", default="", help="Overrides the LLM model.")
-    parser.add_argument("--base-url", default="", dest="base_url", help="OpenAI-compatible base URL.")
-    parser.add_argument("--api-key", default="", help="OpenAI API key (or set OPENAI_API_KEY).")
     parser.add_argument("--parent-pool", type=int, default=0, dest="parent_pool")
     parser.add_argument("--child-pool", type=int, default=0, dest="child_pool")
     parser.add_argument("--searches", type=int, default=0, dest="searches")
