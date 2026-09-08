@@ -121,7 +121,7 @@ class Agent:
             ineffective_CoT=ineff,
         )
         try:
-            raw = self.complete(system, user, temperature=temperature, model=self.model)
+            raw = self.complete(system, user, temperature=temperature, model=self.cfg.llm.model)
         except Exception as exc:  # pragma: no cover - API dependent
             logger.error("generation call for %s failed: %s", agent_id, exc)
             return []
