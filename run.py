@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from cogalpha.models import CogAlphaConfig  # noqa: E402
 from cogalpha.main import CogAlpha  # noqa: E402
+from cogalpha.openai import set_openai_props
 
 
 def build_config(args: argparse.Namespace) -> CogAlphaConfig:
@@ -99,6 +100,7 @@ def run_demo(args: argparse.Namespace) -> None:
     from cogalpha import utils
     from cogalpha.models import ParsedFunction
 
+    set_openai_props(args)
     cfg = build_config(args)
     cfg.data_path = ""
     cfg.use_llm = False  # offline demo: static checks only
@@ -182,6 +184,7 @@ def main() -> int:
     if not args.data:
         parser.error("Provide --data, or use --demo / --self-test.")
 
+    set_openai_props(args)
     cfg = build_config(args)
     engine = CogAlpha(cfg)
     result = engine.run()
