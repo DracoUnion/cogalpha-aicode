@@ -19,7 +19,6 @@ from typing import List, Optional, Tuple
 from pydantic import BaseModel
 
 from . import utils
-from .llm import LLMClient
 from .models import CogAlphaConfig, FeedbackSummary, JudgeResult, ParsedFunction, QualityResult, Factor
 from .openai import call_llm_retry
 from .utils import _render_examples, ext_code_block
@@ -44,12 +43,10 @@ class Agent:
 
     def __init__(
         self,
-        llm: LLMClient,
         cfg: CogAlphaConfig,
         columns_desc: str = "",
         columns_num: int = 0,
     ) -> None:
-        self.llm = llm
         self.cfg = cfg
         self.columns_desc = columns_desc
         self.columns_num = columns_num
@@ -124,7 +121,7 @@ class Agent:
             ineffective_CoT=ineff,
         )
         try:
-            raw = self.llm.complete(system, user, temperature=temperature, model=self.llm.model)
+            raw = self.complete(system, user, temperature=temperature, model=self.model)
         except Exception as exc:  # pragma: no cover - API dependent
             logger.error("generation call for %s failed: %s", agent_id, exc)
             return []
@@ -161,7 +158,7 @@ class Agent:
             extra_guidance=extra_guidance,
         )
         try:
-            raw = self.llm.complete(_SYSTEM_MESSAGE, user, temperature=temperature)
+            raw = self.complete(_SYSTEM_MESSAGE, user, temperature=temperature)
         except Exception as exc:  # pragma: no cover
             logger.error("mutation call failed: %s", exc)
             return []
@@ -186,7 +183,7 @@ class Agent:
             extra_guidance=extra_guidance,
         )
         try:
-            raw = self.llm.complete(_SYSTEM_MESSAGE, user, temperature=temperature)
+            raw = self.complete(_SYSTEM_MESSAGE, user, temperature=temperature)
         except Exception as exc:  # pragma: no cover
             logger.error("crossover call failed: %s", exc)
             return []
@@ -204,13 +201,13 @@ class Agent:
     def judge(self, code: str) -> JudgeResult:
         """Judge Agent: decide Accept/Reject + improvement feedback."""
         prompt = self.build_quality_prompt("judge_agent", new_factor_code=code)
-        return self.llm.complete_json(_SYSTEM_MESSAGE, prompt, JudgeResult)
+        return self.complete_json(_SYSTEM_MESSAGE, prompt, JudgeResult)
 
     def code_quality(self, code: str) -> QualityResult:
         """Code Quality Agent: LLM review that complements static checks."""
         prompt = self.build_quality_prompt("code_quality_agent", code=code)
         try:
-            raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
+            raw = self.complete_quality(_SYSTEM_MESSAGE, prompt)
         except Exception as exc:  # pragma: no cover - API dependent
             logger.warning("code_quality LLM call failed: %s", exc)
             return QualityResult(status="correct")
@@ -228,7 +225,7 @@ class Agent:
             old_code=old_code,
             error=error,
         )
-        raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
+        raw = self.complete_quality(_SYSTEM_MESSAGE, prompt)
         funcs = self.parse_generated_code(raw)
         return funcs[0].code if funcs else old_code
 
@@ -241,7 +238,7 @@ class Agent:
             old_code=old_code,
             dynamic_feedback=feedback,
         )
-        raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
+        raw = self.complete_quality(_SYSTEM_MESSAGE, prompt)
         funcs = self.parse_generated_code(raw)
         return funcs[0].code if funcs else old_code
 
@@ -338,7 +335,7 @@ class Agent:
 
         prompt = _COLUMN_DESCRIPTION.replace("{factor_names}", ", ".join(factor_cols))
         try:
-            raw = self.llm.complete_quality(_SYSTEM_MESSAGE, prompt)
+            raw = self.complete_quality(_SYSTEM_MESSAGE, prompt)
         except Exception as exc:  # pragma: no cover - network/API dependent
             logger.warning("column_description LLM call failed (%s); using plain names", exc)
             return "\n".join(f"- {c}" for c in factor_cols)
@@ -366,7 +363,6 @@ class Agent:
         ineffective: List[Factor],
     ) -> FeedbackSummary:
         """Produce effective/ineffective CoT summaries from sample factors."""
-        llm = self.llm
         effective_CoT, ineffective_CoT = "", ""
 
         if effective:
@@ -377,7 +373,7 @@ class Agent:
                 "{factor_examples}", _render_examples(sample)
             )
             try:
-                effective_CoT = llm.complete_quality(_SYSTEM_MESSAGE, user)
+                effective_CoT = self.complete_quality(_SYSTEM_MESSAGE, user)
             except Exception as exc:  # pragma: no cover - network/API dependent
                 logger.warning("effective summary failed: %s", exc)
                 effective_CoT = "; ".join(f.name for f in sample)
@@ -390,7 +386,7 @@ class Agent:
                 "{factor_examples}", _render_examples(sample)
             )
             try:
-                ineffective_CoT = llm.complete_quality(_SYSTEM_MESSAGE, user)
+                ineffective_CoT = self.complete_quality(_SYSTEM_MESSAGE, user)
             except Exception as exc:  # pragma: no cover - network/API dependent
                 logger.warning("ineffective summary failed: %s", exc)
                 ineffective_CoT = "; ".join(f.name for f in sample)

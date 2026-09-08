@@ -28,7 +28,6 @@ import pandas as pd
 from . import utils
 from .agent import Agent
 from .models import CogAlphaConfig
-from .llm import LLMClient
 from .prompts import _AGENTS
 from .models import Factor, FeedbackSummary, ParsedFunction, SearchResult
 
@@ -40,8 +39,7 @@ class CogAlpha:
 
     def __init__(self, cfg: CogAlphaConfig) -> None:
         self.cfg = cfg
-        self.llm = LLMClient(cfg)
-        self.agent = Agent(self.llm, self.cfg)
+        self.agent = Agent(self.cfg)
         self._logger = logger
 
     # ------------------------------------------------------------------ #
@@ -420,7 +418,7 @@ class CogAlpha:
         effective = utils.rank_factors(valid)[: cfg.feedback.top_effective]
         ineffective = utils.rank_factors(valid, key="ic")[-cfg.feedback.worst_ineffective:] if valid else []
         try:
-            return self.agent.build_feedback(effective, ineffective, self.llm)
+            return self.agent.build_feedback(effective, ineffective)
         except Exception as exc:  # pragma: no cover - API dependent
             self._logger.warning("feedback build failed: %s", exc)
             return utils.deterministic_build_feedback(effective, ineffective)
