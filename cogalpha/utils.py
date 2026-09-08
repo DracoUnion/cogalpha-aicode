@@ -357,3 +357,7 @@ def _safe(f: Factor, key: str) -> float:
 
 def render_prompt(prompt: str, **kw):
     return re.sub(r"{(\w+)}", lambda g: kw.get(g.group(1), g.group(0)), prompt)
+
+
+ext_code_block = lambda s: re.search(r'```\w*([\s\S]+)```', s).group(1)
+ext_cont_block = lambda s: re.search(r'\[content\]([\s\S]+)\[/content\]', s).group(1)

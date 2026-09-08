@@ -17,6 +17,8 @@ from typing import List, Optional, Type, TypeVar
 from pydantic import BaseModel
 
 from .models import CogAlphaConfig
+from .utils import ext_code_block
+from .openai import call_llm_retry
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +79,9 @@ class LLMClient:
         """A single chat completion; temperature defaults to a random gen value."""
         if temperature is None:
             temperature = random.choice(self.gen_temperatures)
-        return self._chat(
+        return call_llm_retry(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            model=model or self.model,
+            model or self.model,
             temperature=temperature,
         )
 
@@ -92,7 +94,7 @@ class LLMClient:
         model: Optional[str] = None,
     ) -> str:
         """A chat completion from a quality-checker agent (fixed temperature)."""
-        return self._chat(
+        return call_llm_retry(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             model=model or self.quality_model,
             temperature=temperature if temperature is not None else self.quality_temperature,
@@ -102,29 +104,18 @@ class LLMClient:
         self,
         system: str,
         user: str,
-        model: Type[T],
+        model: BaseModel,
         *,
         temperature: Optional[float] = None,
         model_name: Optional[str] = None,
     ) -> T:
         """Ask the model to return a JSON object and coerce it into `model`."""
-        raw = self._chat(
+        parse_output = lambda s: \
+            model.model_validate_json(ext_code_block(s))
+        return call_llm_retry(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             model=model_name or self.quality_model,
             temperature=temperature if temperature is not None else self.quality_temperature,
-            response_format={"type": "json_object"},
+            parse_output=parse_output,
         )
-        try:
-            payload = json.loads(raw)
-        except json.JSONDecodeError:
-            payload = _extract_json(raw)
-        return model.model_validate(payload)
 
-
-def _extract_json(text: str) -> dict:
-    """Best-effort recovery of a JSON object from a noisy response."""
-    start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end == -1 or end <= start:
-        raise ValueError(f"Cannot find a JSON object in model output: {text[:200]!r}")
-    return json.loads(text[start : end + 1])
