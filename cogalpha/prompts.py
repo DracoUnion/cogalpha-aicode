@@ -1018,7 +1018,15 @@ The function outputs a pd.Series indexed by (date, ticker), with the same name a
 
 ---
 
-### Please format your response strictly as:
+### Please format your response strictly as JSON formaet surrounded with three backticks (```).
+
+```
+{
+    "practical_soundness": "...",
+    "recommendation": "Accept|Reject",
+    "feedback": "..."
+}
+```
 
 Practical Soundness: [Concise analysis — what is good, what needs improvement, if any.]
 
