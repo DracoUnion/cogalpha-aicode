@@ -420,7 +420,7 @@ class CogAlpha:
         effective = utils.rank_factors(valid)[: cfg.feedback.top_effective]
         ineffective = utils.rank_factors(valid, key="ic")[-cfg.feedback.worst_ineffective:] if valid else []
         try:
-            return utils.build_feedback(effective, ineffective, self.llm)
+            return self.agent.build_feedback(effective, ineffective, self.llm)
         except Exception as exc:  # pragma: no cover - API dependent
             self._logger.warning("feedback build failed: %s", exc)
             return utils.deterministic_build_feedback(effective, ineffective)

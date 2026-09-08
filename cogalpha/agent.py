@@ -14,11 +14,13 @@ A single `Agent` holds the LLM client plus the panel context (`columns_desc` /
 from __future__ import annotations
 
 import logging
+import random
 from typing import List, Optional, Tuple
 
 from . import utils
 from .llm import LLMClient
-from .models import CogAlphaConfig, FeedbackSummary, JudgeResult, ParsedFunction, QualityResult
+from .models import CogAlphaConfig, FeedbackSummary, JudgeResult, ParsedFunction, QualityResult, Factor
+from .utils import _render_examples
 from .prompts import (
     _AGENTS,
     _COLUMN_DESCRIPTION,
@@ -28,6 +30,8 @@ from .prompts import (
     _INEFFECTIVE_ANALYSIS,
     _QUALITY,
     _SYSTEM_MESSAGE,
+    _EFFECTIVE_SUMMARY,
+    _INEFFECTIVE_SUMMARY,
 )
 
 logger = logging.getLogger(__name__)
@@ -352,3 +356,43 @@ class Agent:
     def list_agents(self) -> List[str]:
         """Sorted ids of the seven-level generation agents."""
         return sorted(_AGENTS.keys())
+
+
+    def build_feedback(
+        self,
+        effective: List[Factor],
+        ineffective: List[Factor],
+    ) -> FeedbackSummary:
+        """Produce effective/ineffective CoT summaries from sample factors."""
+        llm = self.llm
+        effective_CoT, ineffective_CoT = "", ""
+
+        if effective:
+            size = min(len(effective), 6)
+            sample = random.sample(effective, size)
+            names = ", ".join(f.name for f in sample)
+            user = _EFFECTIVE_SUMMARY.replace("{factor_names}", names).replace(
+                "{factor_examples}", _render_examples(sample)
+            )
+            try:
+                effective_CoT = llm.complete_quality(_SYSTEM_MESSAGE, user)
+            except Exception as exc:  # pragma: no cover - network/API dependent
+                logger.warning("effective summary failed: %s", exc)
+                effective_CoT = "; ".join(f.name for f in sample)
+
+        if ineffective:
+            size = min(len(ineffective), 8)
+            sample = random.sample(ineffective, size)
+            names = ", ".join(f.name for f in sample)
+            user = _INEFFECTIVE_SUMMARY.replace("{factor_names}", names).replace(
+                "{factor_examples}", _render_examples(sample)
+            )
+            try:
+                ineffective_CoT = llm.complete_quality(_SYSTEM_MESSAGE, user)
+            except Exception as exc:  # pragma: no cover - network/API dependent
+                logger.warning("ineffective summary failed: %s", exc)
+                ineffective_CoT = "; ".join(f.name for f in sample)
+
+        effective_CoT = effective_CoT[:2000]
+        ineffective_CoT = ineffective_CoT[:2000]
+        return FeedbackSummary(effective=effective_CoT, ineffective=ineffective_CoT)

@@ -327,43 +327,6 @@ def _render_examples(factors: List[Factor]) -> str:
     return "\n".join(lines)
 
 
-def build_feedback(
-    effective: List[Factor],
-    ineffective: List[Factor],
-    llm: LLMClient,
-) -> FeedbackSummary:
-    """Produce effective/ineffective CoT summaries from sample factors."""
-    effective_CoT, ineffective_CoT = "", ""
-
-    if effective:
-        size = min(len(effective), 6)
-        sample = random.sample(effective, size)
-        names = ", ".join(f.name for f in sample)
-        user = _EFFECTIVE_SUMMARY.replace("{factor_names}", names).replace(
-            "{factor_examples}", _render_examples(sample)
-        )
-        try:
-            effective_CoT = llm.complete_quality(_SYSTEM_MESSAGE, user)
-        except Exception as exc:  # pragma: no cover - network/API dependent
-            logger.warning("effective summary failed: %s", exc)
-            effective_CoT = "; ".join(f.name for f in sample)
-
-    if ineffective:
-        size = min(len(ineffective), 8)
-        sample = random.sample(ineffective, size)
-        names = ", ".join(f.name for f in sample)
-        user = _INEFFECTIVE_SUMMARY.replace("{factor_names}", names).replace(
-            "{factor_examples}", _render_examples(sample)
-        )
-        try:
-            ineffective_CoT = llm.complete_quality(_SYSTEM_MESSAGE, user)
-        except Exception as exc:  # pragma: no cover - network/API dependent
-            logger.warning("ineffective summary failed: %s", exc)
-            ineffective_CoT = "; ".join(f.name for f in sample)
-
-    effective_CoT = effective_CoT[:2000]
-    ineffective_CoT = ineffective_CoT[:2000]
-    return FeedbackSummary(effective=effective_CoT, ineffective=ineffective_CoT)
 
 
 def deterministic_build_feedback(
