@@ -261,7 +261,6 @@ class CogAlpha:
         columns_desc, columns_num,
         df, label, result,
     ):
-        # --- Phase 1: build the initial parent pool. ---
         self._step("1", "构建初始父池（目标 %d 个因子）", self.cfg.generation.initial_pool_size)
         parent_pool_fname = path.join(self.proj_dir, 'parent_pool.yaml')
         if path.isfile(parent_pool_fname) and \
@@ -329,6 +328,7 @@ class CogAlpha:
 
         result = SearchResult()
 
+        # --- Phase 1: build the initial parent pool. ---
         parent_pool = self._step_build_initial_parent_pool(columns_desc, columns_num, df, label, result)
 
         # --- Phase 2: evolution searches over each agent. ---
