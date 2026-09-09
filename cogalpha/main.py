@@ -233,7 +233,7 @@ class CogAlpha:
         df: pd.DataFrame, 
         label: pd.Series,
     ) -> List[Factor]:
-        self._step("7", "构建初始父池 #%d", idx)
+        self._step("1", "构建初始父池 #%d", idx)
         pool: List[Factor] = []
         agent_ids = self.agent.list_agents()
         while True:
@@ -296,7 +296,7 @@ class CogAlpha:
         utils.write_yaml(parent_pool_fname, parent_pool)
         result.candidates = list(parent_pool)
         result.elite = list(parent_pool)
-        self._step(f"7", "初始父池完成：%d 个因子", len(parent_pool))
+        self._step(f"1", "初始父池完成：%d 个因子", len(parent_pool))
         self._log_pool("initial", parent_pool)
         return parent_pool
     
@@ -332,10 +332,10 @@ class CogAlpha:
         parent_pool = self._step_build_initial_parent_pool(columns_desc, columns_num, df, label, result)
 
         # --- Phase 2: evolution searches over each agent. ---
-        self._step("8", "进化搜索（%d 次搜索 × %d 个 agent）", gen.evolution_searches, len(agent_ids))
+        self._step("2", "进化搜索（%d 次搜索 × %d 个 agent）", gen.evolution_searches, len(agent_ids))
         for search_idx in range(gen.evolution_searches):
             for a, agent_id in enumerate(agent_ids, 1):
-                self._step(f"8.{search_idx + 1}.{a}", "进化搜索 %d/%d，agent %s",
+                self._step(f"2.{search_idx + 1}.{a}", "进化搜索 %d/%d，agent %s",
                            search_idx + 1, gen.evolution_searches, agent_id)
                 level, _, _ = _AGENTS[agent_id]
                 parent_pool, result = self._evolve_agent(
@@ -343,11 +343,11 @@ class CogAlpha:
                     step=f"8.{search_idx + 1}.{a}",
                 )
 
-        self._step("9", "排序最终候选 / 精英")
+        self._step("3", "排序最终候选 / 精英")
         result.candidates = utils.rank_factors(result.candidates)
         result.elite = utils.rank_factors(result.elite)
 
-        self._step("10", "保存结果")
+        self._step("4", "保存结果")
         self._save(result)
         return result
 
