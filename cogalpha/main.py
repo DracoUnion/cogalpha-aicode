@@ -19,10 +19,12 @@ from __future__ import annotations
 
 import logging
 import random
+import re
 from pathlib import Path
+from os import path
 from typing import Dict, List, Optional
 from concurrent.futures import ThreadPoolExecutor, Future
-
+import os
 import numpy as np
 import pandas as pd
 
@@ -42,6 +44,7 @@ class CogAlpha:
         self.cfg = cfg
         self.agent = Agent(self.cfg)
         self._logger = logger
+        self.proj_dir = re.sub(r'\.\w+$', '', cfg.data_path)
 
     # ------------------------------------------------------------------ #
     # Setup
@@ -80,7 +83,14 @@ class CogAlpha:
 
     def _describe(self, df: pd.DataFrame) -> str:
         try:
-            return self.agent.describe_columns(df)
+            coldesc_fname = path.join(self.proj_dir, 'colum_desc.txt')
+            if path.isfile(coldesc_fname) and \
+               path.getsize(coldesc_fname):
+               return open(coldesc_fname, encoding='utf8').read()
+            else:
+                coldesc = self.agent.describe_columns(df)
+                open(coldesc_fname, 'w', encoding='utf8').write(coldesc)
+                return coldesc
         except Exception as exc:  # pragma: no cover - API dependent
             self._logger.warning("column_description failed: %s; using manual block", exc)
         return utils.build_column_desc_manual(list(df.columns))
@@ -252,6 +262,7 @@ class CogAlpha:
 
         self._step("2", "加载 OHLCV 数据面板")
         df = self._load()
+        os.makedirs(self.proj_dir, exist_ok=True)
 
         self._step("3", "计算 %d 日前向收益标签", self.cfg.forecast_horizon)
         label = self.compute_label(df, self.cfg.forecast_horizon)
