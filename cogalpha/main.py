@@ -427,7 +427,7 @@ class CogAlpha:
         top = utils.rank_factors(pool)[:3]
         self._logger.info(
             "[%s] pool size=%d top_ic=[%s]",
-            tag, len(pool), ", ".join(f"{f.ic:.4f}" for f in top),
+            tag, len(pool), ", ".join(f"{f.ic:.4f}" if f.ic is not None else "N/A" for f in top),
         )
 
     def _step(self, seq: str, msg: str, *args) -> None:
