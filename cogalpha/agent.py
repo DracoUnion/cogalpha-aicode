@@ -438,7 +438,7 @@ class Agent:
         *,
         temperature: Optional[float] = None,
         model_name: Optional[str] = None,
-    ) -> T:
+    ) -> BaseModel:
         """Ask the model to return a JSON object and coerce it into `model`."""
         parse_output = lambda s: \
             model.model_validate_json(ext_code_block(s))
