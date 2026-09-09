@@ -20,7 +20,9 @@ from __future__ import annotations
 import logging
 import random
 import re
+import yaml
 from pathlib import Path
+from pydantic import parse_obj_as
 from os import path
 from typing import Dict, List, Optional
 from concurrent.futures import ThreadPoolExecutor, Future
@@ -283,7 +285,15 @@ class CogAlpha:
 
         # --- Phase 1: build the initial parent pool. ---
         self._step("7", "构建初始父池（目标 %d 个因子）", gen.initial_pool_size)
-        parent_pool: List[Factor] = []
+        parent_pool_fname = path.join(self.proj_dir, 'parent_pool.yaml')
+        if path.isfile(parent_pool_fname) and \
+           path.getsize(parent_pool_fname):
+           parent_pool = yaml.safe_load(open(parent_pool_fname, encoding='utf8').read())
+           parent_pool = parse_obj_as(List[Factor], parent_pool)
+        else:
+            parent_pool: List[Factor] = []
+            utils.write_yaml(parent_pool_fname, parent_pool)
+
         trpool = ThreadPoolExecutor(self.cfg.threads)
         hdls: List[Future] = []
         for i in range(gen.initial_pool_size):
@@ -297,9 +307,12 @@ class CogAlpha:
                 for h in hdls:
                     parent_pool += h.result()
                 hdls = []
+            if i % 10 == 0:
+                utils.write_yaml(parent_pool_fname, parent_pool)
         for h in hdls:
             parent_pool += h.result()
         hdls = []
+        utils.write_yaml(parent_pool_fname, parent_pool)
 
         parent_pool = utils.rank_factors(parent_pool)[: gen.parent_pool_size]
         result.candidates = list(parent_pool)
