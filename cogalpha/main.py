@@ -255,36 +255,14 @@ class CogAlpha:
             if pool: break
 
         return pool
-    # ------------------------------------------------------------------ #
-    # Main
-    # ------------------------------------------------------------------ #
-    def run(self) -> SearchResult:
-        self._step("1", "初始化随机种子（seed=%d）", self.cfg.generation.random_state)
-        random.seed(self.cfg.generation.random_state)
 
-        self._step("2", "加载 OHLCV 数据面板")
-        df = self._load()
-        os.makedirs(self.proj_dir, exist_ok=True)
-
-        self._step("3", "计算 %d 日前向收益标签", self.cfg.forecast_horizon)
-        label = self.compute_label(df, self.cfg.forecast_horizon)
-
-        self._step("4", "生成列描述")
-        columns_desc = self._describe(df)
-        columns_num = len(df.columns)
-
-        self._step("5", "配置 Agent（%d 列）", columns_num)
-        self.agent.columns_desc = columns_desc
-        self.agent.columns_num = columns_num
-
-        gen = self.cfg.generation
-        agent_ids = self.agent.list_agents()
-        self._step("6", "枚举生成 agent（%d 个）", len(agent_ids))
-
-        result = SearchResult()
-
+    def _step_build_initial_parent_pool(
+        self,
+        columns_desc, columns_num,
+        df, label, result,
+    ):
         # --- Phase 1: build the initial parent pool. ---
-        self._step("7", "构建初始父池（目标 %d 个因子）", gen.initial_pool_size)
+        self._step("1", "构建初始父池（目标 %d 个因子）", self.cfg.generation.initial_pool_size)
         parent_pool_fname = path.join(self.proj_dir, 'parent_pool.yaml')
         if path.isfile(parent_pool_fname) and \
            path.getsize(parent_pool_fname):
@@ -296,7 +274,7 @@ class CogAlpha:
 
         trpool = ThreadPoolExecutor(self.cfg.threads)
         hdls: List[Future] = []
-        rest_num = max(0, gen.initial_pool_size - len(parent_pool))
+        rest_num = max(0, self.cfg.generation.initial_pool_size - len(parent_pool))
         for i in range(rest_num):
             h = trpool.submit(
                 self._tr_build_parent_pool,
@@ -315,12 +293,43 @@ class CogAlpha:
         hdls = []
         
 
-        parent_pool = utils.rank_factors(parent_pool)[: gen.parent_pool_size]
+        parent_pool = utils.rank_factors(parent_pool)[: self.cfg.generation.parent_pool_size]
         utils.write_yaml(parent_pool_fname, parent_pool)
         result.candidates = list(parent_pool)
         result.elite = list(parent_pool)
         self._step(f"7", "初始父池完成：%d 个因子", len(parent_pool))
         self._log_pool("initial", parent_pool)
+        return parent_pool
+    
+    # ------------------------------------------------------------------ #
+    # Main
+    # ------------------------------------------------------------------ #
+    def run(self) -> SearchResult:
+        self._step("0", "初始化随机种子（seed=%d）", self.cfg.generation.random_state)
+        random.seed(self.cfg.generation.random_state)
+
+        self._step("0", "加载 OHLCV 数据面板")
+        df = self._load()
+        os.makedirs(self.proj_dir, exist_ok=True)
+
+        self._step("0", "计算 %d 日前向收益标签", self.cfg.forecast_horizon)
+        label = self.compute_label(df, self.cfg.forecast_horizon)
+
+        self._step("0", "生成列描述")
+        columns_desc = self._describe(df)
+        columns_num = len(df.columns)
+
+        self._step("0", "配置 Agent（%d 列）", columns_num)
+        self.agent.columns_desc = columns_desc
+        self.agent.columns_num = columns_num
+
+        gen = self.cfg.generation
+        agent_ids = self.agent.list_agents()
+        self._step("0", "枚举生成 agent（%d 个）", len(agent_ids))
+
+        result = SearchResult()
+
+        parent_pool = self._step_build_initial_parent_pool(columns_desc, columns_num, df, label, result)
 
         # --- Phase 2: evolution searches over each agent. ---
         self._step("8", "进化搜索（%d 次搜索 × %d 个 agent）", gen.evolution_searches, len(agent_ids))
