@@ -18,11 +18,13 @@ import logging
 import random
 import re
 import textwrap
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 import numpy as np
 import pandas as pd
 from scipy import stats
+from pydantic import BaseModel
+import yaml
 
 from .models import Factor, FeedbackSummary, ParsedFunction
 from .prompts import _EFFECTIVE_SUMMARY, _INEFFECTIVE_SUMMARY, _SYSTEM_MESSAGE
@@ -361,3 +363,16 @@ def render_prompt(prompt: str, **kw):
 
 ext_code_block = lambda s: re.search(r'```\w*([\s\S]+)```', s).group(1)
 ext_cont_block = lambda s: re.search(r'\[content\]([\s\S]+)\[/content\]', s).group(1)
+
+def write_yaml(self, obj: Any, yaml_fname: str) -> None:
+    """在主线程中将 meta 写回 yaml 文件。"""
+    if isinstance(obj, BaseModel):
+        obj = obj.dict()
+    elif isinstance(obj, list):
+        obj = [
+            it.dict() if isinstance(it, BaseModel) else it
+            for it in obj
+        ]
+    with open(yaml_fname, 'w', encoding='utf8') as f:
+        f.write(yaml.safe_dump(obj, allow_unicode=True))
+        f.flush()
