@@ -21,6 +21,7 @@ import logging
 import random
 from pathlib import Path
 from typing import Dict, List, Optional
+from concurrent.futures import ThreadPoolExecutor, Future
 
 import numpy as np
 import pandas as pd
@@ -211,6 +212,37 @@ class CogAlpha:
             logger.info("Factor %s failed to execute: %s", factor.name, exc)
             return None
 
+
+    def _tr_build_parent_pool(
+        self,
+        idx: int,
+        columns_desc: str,
+        columns_num: int,
+        df: pd.DataFrame, 
+        label: pd.Series,
+    ) -> List[Factor]:
+        self._step("7", "构建初始父池 #%d", idx)
+        pool: List[Factor] = []
+        agent_ids = self.agent.list_agents()
+        while True:
+            agent_id = random.choice(agent_ids)
+            level, _, _ = _AGENTS[agent_id]
+            pfs = self.agent.generate_code(
+                agent_id, columns_desc, columns_num,
+                self.cfg.generation.num_per_request, 
+                self.cfg.forecast_horizon, None,
+            )
+            for pf in pfs:
+                f = self.produce_factor(
+                    pf, df, label,
+                    theme=agent_id, level=level, agent_id=agent_id,
+                    generation=0, source="generated",
+                )
+                if f is not None and f.executable:
+                    pool.append(f)
+            if pool: break
+
+        return pool
     # ------------------------------------------------------------------ #
     # Main
     # ------------------------------------------------------------------ #
@@ -241,30 +273,27 @@ class CogAlpha:
         # --- Phase 1: build the initial parent pool. ---
         self._step("7", "构建初始父池（目标 %d 个因子）", gen.initial_pool_size)
         parent_pool: List[Factor] = []
-        attempts = 0
-        while len(parent_pool) < gen.initial_pool_size and attempts < gen.initial_pool_size * 4:
-            attempts += 1
-            agent_id = random.choice(agent_ids)
-            level, _, _ = _AGENTS[agent_id]
-            pfs = self.agent.generate_code(
-                agent_id, columns_desc, columns_num,
-                gen.num_per_request, self.cfg.forecast_horizon, None,
+        trpool = ThreadPoolExecutor(self.cfg.threads)
+        hdls: List[Future] = []
+        for i in range(gen.initial_pool_size):
+            h = trpool.submit(
+                self._tr_build_parent_pool,
+                i, columns_desc, columns_num,
+                df, label,
             )
-            for pf in pfs:
-                f = self.produce_factor(
-                    pf, df, label,
-                    theme=agent_id, level=level, agent_id=agent_id,
-                    generation=0, source="generated",
-                )
-                if f is not None and f.executable:
-                    parent_pool.append(f)
-            if attempts % 10 == 0:
-                self._step(f"7.{attempts}", "父池进度 %d/%d", len(parent_pool), gen.initial_pool_size)
+            hdls.append(h)
+            if len(hdls) > self.cfg.threads:
+                for h in hdls:
+                    parent_pool += h.result()
+                hdls = []
+        for h in hdls:
+            parent_pool += h.result()
+        hdls = []
 
         parent_pool = utils.rank_factors(parent_pool)[: gen.parent_pool_size]
         result.candidates = list(parent_pool)
         result.elite = list(parent_pool)
-        self._step(f"7.{attempts}", "初始父池完成：%d 个因子", len(parent_pool))
+        self._step(f"7", "初始父池完成：%d 个因子", len(parent_pool))
         self._log_pool("initial", parent_pool)
 
         # --- Phase 2: evolution searches over each agent. ---

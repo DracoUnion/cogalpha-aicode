@@ -114,6 +114,7 @@ class CogAlphaConfig(BaseModel):
     output_dir: str = Field(default="./cogalpha_output", description="Where results/pools are persisted.")
     device: str = Field(default="cpu", description="Ignored except for logging; LightGBM runs on CPU.")
     use_llm: bool = Field(default=True, description="Run LLM agents. Set False for a fully offline static-only run.")
+    threads: int = 8
 
 
 # --------------------------------------------------------------------------- #
