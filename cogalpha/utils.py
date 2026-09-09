@@ -364,7 +364,7 @@ def render_prompt(prompt: str, **kw):
 ext_code_block = lambda s: re.search(r'```\w*([\s\S]+)```', s).group(1)
 ext_cont_block = lambda s: re.search(r'\[content\]([\s\S]+)\[/content\]', s).group(1)
 
-def write_yaml(obj: Any, yaml_fname: str) -> None:
+def write_yaml(yaml_fname: str, obj: Any) -> None:
     """在主线程中将 meta 写回 yaml 文件。"""
     if isinstance(obj, BaseModel):
         obj = obj.dict()
