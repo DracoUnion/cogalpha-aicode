@@ -313,9 +313,10 @@ class CogAlpha:
         for h in hdls:
             parent_pool += h.result()
         hdls = []
-        utils.write_yaml(parent_pool_fname, parent_pool)
+        
 
         parent_pool = utils.rank_factors(parent_pool)[: gen.parent_pool_size]
+        utils.write_yaml(parent_pool_fname, parent_pool)
         result.candidates = list(parent_pool)
         result.elite = list(parent_pool)
         self._step(f"7", "初始父池完成：%d 个因子", len(parent_pool))
