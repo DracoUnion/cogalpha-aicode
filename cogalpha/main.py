@@ -296,7 +296,8 @@ class CogAlpha:
 
         trpool = ThreadPoolExecutor(self.cfg.threads)
         hdls: List[Future] = []
-        for i in range(gen.initial_pool_size):
+        rest_num = max(0, gen.initial_pool_size - len(parent_pool))
+        for i in range(rest_num):
             h = trpool.submit(
                 self._tr_build_parent_pool,
                 i, columns_desc, columns_num,
