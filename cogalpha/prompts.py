@@ -1,23 +1,23 @@
-"""Prompt templates for CogAlpha, embedded directly (no external files).
+"""CogAlpha 的提示词模板，直接内嵌（无外部文件）。
 
-All prompts from `prompts/` are inlined here as module-level constants. Every
-prompt is a plain multi-line string whose dynamic parts are written as
-`{placeholder}` tokens — nothing is assembled at import time and nothing uses
-`str.format`. Substitution happens with `.replace(token, value)` in
-`agent.Agent`, which references the constants directly (there is no
-`PromptLibrary` wrapper).
+所有来自 `prompts/` 的提示词都以模块级常量的形式内联在此。每个
+提示词都是纯多行字符串，其动态部分写为
+`{placeholder}` 标记 — 导入时不组装，不使用
+`str.format`。替换通过 `.replace(token, value)` 在
+`agent.Agent` 中进行，直接引用常量（没有
+`PromptLibrary` 包装器）。
 
-Available constants:
+可用常量：
 
-  - shared blocks: _SYSTEM_MESSAGE, _REQUIREMENTS, _LIBRARIES, _OUTPUT_FORMAT,
+  - 共享块： _SYSTEM_MESSAGE, _REQUIREMENTS, _LIBRARIES, _OUTPUT_FORMAT,
     _BASE_FACTOR_GUIDANCE, _COLUMN_DESCRIPTION, _EFFECTIVE_ANALYSIS,
     _INEFFECTIVE_ANALYSIS, _EFFECTIVE_SUMMARY, _INEFFECTIVE_SUMMARY,
     _GUIDANCE_PARAPHRASE
-  - `_AGENTS`: dict[agent_id, (level, intro, guidance)] for the 21 seven-level
-    generation agents
-  - `_QUALITY` / `_EVOLUTION`: full user prompts for the quality-checker and
-    thinking-evolution agents
-  - `_GENERATION_TEMPLATES`: composed per-agent generation user prompts
+  - `_AGENTS`: dict[agent_id, (level, intro, guidance)] 用于 21 个七层级的
+    生成代理
+  - `_QUALITY` / `_EVOLUTION`: 质量检查器和
+    思维进化代理的完整用户提示词
+  - `_GENERATION_TEMPLATES`: 为每个代理组合的生成用户提示词
 """
 
 from __future__ import annotations
@@ -27,187 +27,187 @@ from typing import Dict, Tuple
 # --------------------------------------------------------------------------- #
 # Shared blocks
 # --------------------------------------------------------------------------- #
-_SYSTEM_MESSAGE = """You are an expert quantitative researcher and financial feature engineer."""
+_SYSTEM_MESSAGE = """你是一位专业的量化研究员和金融特征工程师。"""
 
-_REQUIREMENTS = """### Requirements:
+_REQUIREMENTS = """### 要求：
 
-- The input `DataFrame` has a MultiIndex of (date, ticker), and has already been grouped by ticker:
-    - Each input `DataFrame` is a time series of a single stock.
+- 输入 `DataFrame` 具有 (date, ticker) 的 MultiIndex，且已按 ticker 分组：
+    - 每个输入的 `DataFrame` 是单只股票的时间序列。
 
-- Output: A `pd.Series` indexed by `(date, ticker)` with the **same name** as the function.
+- 输出：一个以 `(date, ticker)` 为索引的 `pd.Series`，其 **名称** 与函数名相同。
 
-- Each function must:
-    - Have a descriptive, unique name: `factor_<logic>_<transformation(s)>_<window(s)>_<field>`.
-    - Include a clear docstring explaining the logic and formula.
-    - Balance predictive power with economic/financial interpretability.
-    - The output column name must match the function name.
-    - Be concise, precise, and readable.
-    - Build new alpha factors based on existing ones."""
+- 每个函数必须：
+    - 拥有描述性、唯一的名称：`factor_<logic>_<transformation(s)>_<window(s)>_<field>`。
+    - 包含清晰的 docstring，解释逻辑和公式。
+    - 平衡预测能力与经济/金融可解释性。
+    - 输出列名必须与函数名匹配。
+    - 简洁、精确且可读。
+    - 基于现有因子构建新的 alpha 因子。"""
 
-_LIBRARIES = """### Pre-imported libraries you can use (current versions):
+_LIBRARIES = """### 可用的预导入库（当前版本）：
 
-- `"np"`: import numpy as np  (numpy version: 2.2.6)
-- `"pd"`: import pandas as pd  (pandas version: 2.2.3)
-- `"stats"`: from scipy import stats  (scipy version: 1.15.3)
-- `"talib"`: import talib  (talib version: 0.5.1)
-- `"math"`: import math  (built-in module)
+- `"np"`: import numpy as np  (numpy 版本：2.2.6)
+- `"pd"`: import pandas as pd  (pandas 版本：2.2.3)
+- `"stats"`: from scipy import stats  (scipy 版本：1.15.3)
+- `"talib"`: import talib  (talib 版本：0.5.1)
+- `"math"`: import math  (内置模块)
 
-Coding Guidelines:
-- Ensure the code is robust, efficient, and optimized:
-    - Handle edge cases and exceptions (e.g., NaN values).
-    - Minimize unnecessary computations and prefer vectorized operations (e.g., pandas, numpy).
-    - Ensure numerical stability.
-    - **Strict Rule: Nested loops are absolutely forbidden.**
-        - You must **never** write any form of loop inside another loop.
-        - Forbidden patterns include but are not limited to:
-            - `for` inside `for`
-            - `while` inside `while`
-            - `for` inside `while`
-            - `while` inside `for`
-        - Any nested iteration structure is **prohibited**, regardless of indentation depth.
-        - The use of `while True` or any potentially infinite loop is **strictly prohibited**.
-- When filtering or assigning values in a DataFrame, always use `df_copy.loc[row_indexer, col_indexer] = value`.
+编码规范：
+- 确保代码健壮、高效且经过优化：
+    - 处理边界情况和异常（如 NaN 值）。
+    - 最小化不必要的计算，优先使用向量化操作（如 pandas、numpy）。
+    - 确保数值稳定性。
+    - **严格规则：绝对禁止嵌套循环。**
+        - 你 **绝不能** 在一个循环内部编写任何形式的循环。
+        - 禁止的模式包括但不限于：
+            - `for` 套 `for`
+            - `while` 套 `while`
+            - `for` 套 `while`
+            - `while` 套 `for`
+        - 任何嵌套迭代结构都是 **被禁止的**，无论缩进深度如何。
+        - 使用 `while True` 或任何可能无限循环的结构 **严格禁止**。
+- 当在 DataFrame 中过滤或赋值时，始终使用 `df_copy.loc[row_indexer, col_indexer] = value`。
 
-- Code should be clean, maintainable, and efficient for large datasets:
-    - Use descriptive variable names and minimize memory usage.
-    - Avoid creating unnecessary copies of large dataframes."""
+- 代码应当整洁、可维护、且对大数据集高效：
+    - 使用描述性变量名并最小化内存占用。
+    - 避免创建大型数据框的不必要副本。"""
 
-_OUTPUT_FORMAT = """### Output format specification:
+_OUTPUT_FORMAT = """### 输出格式规范：
 
-- Do NOT use markdown (like ```python)
-- Do NOT add explanation or comments outside the function
-- Each function must be wrapped inside: `[function-N]` ... `[/function-N]`
-- All generated code must be executable and numerically stable.
-- Always define intermediate columns (e.g. df_copy['x']) before referencing them later.
-- The returned Series **must be named exactly the same as the function name**.
-- Each function should follow this format:
+- 请勿使用 markdown（如 ```python）
+- 不要在函数外添加解释或注释
+- 每个函数必须包裹在：`[function-N]` ... `[/function-N]` 中
+- 所有生成的代码必须可执行且数值稳定。
+- 始终在随后引用前定义中间列（如 df_copy['x']）。
+- 返回的 Series **必须** 与函数名完全相同。
+- 每个函数应遵循以下格式：
 
 [function-N]
 def factor_xyz(df):
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
-    # factor computation
+    # 因子计算
     return df_copy['factor_xyz']
 [/function-N]"""
 
-_BASE_FACTOR_GUIDANCE = """### Factor Design Guidance:
+_BASE_FACTOR_GUIDANCE = """### 因子设计指南：
 
-You are encouraged to explore a wide variety of signals and techniques related to {factor_type}, including but not limited to:
+鼓励你探索与 {factor_type} 相关的各种信号和技术，包括但不限于：
 
-- [List of common techniques / example categories]
-- [List of possible interactions or advanced ideas]
+- [常用技术 / 示例类别列表]
+- [可能的交互或高级想法列表]
 
-Please do NOT limit yourself to simple formulas or common patterns.
-You are expected to innovate, introduce mathematically sophisticated or unconventional structures, and combine multiple concepts where reasonable.
+请不要将自己局限于简单的公式或常见模式。
+期望你创新，引入数学上复杂或非传统的结构，并在合理时组合多个概念。
 
-The goal is to generate factors that are **predictive**, **robust**, and **economically interpretable**, while being **structurally diverse** from existing factors."""
+目标是生成 **有预测性**、**稳健** 且 **经济可解释** 的因子，同时在结构上与现有因子保持 **多样性**。"""
 
-_COLUMN_DESCRIPTION = """For each of the following financial factor names, provide a precise and concise English description (no more than 20 words).
-IMPORTANT: Do not modify the factor names in any way. Use the exact same name as input.
-Return your answer in the format:
-<exact_factor_name>: <description>
+_COLUMN_DESCRIPTION = """为以下每个金融因子名称提供精确且简洁的英文描述（不超过 20 个单词）。
+重要：请勿以任何方式修改因子名称。使用完全相同的输入名称。
+请按以下格式返回答案：
+<精确因子名>: <描述>
 
 {factor_names}"""
 
 _EFFECTIVE_ANALYSIS = """---
-### Analysis of Effective Factors and Innovation Directions:
-Below is a condensed CoT-style summary built from recent successful cases and why they work well.
-Mini-Chain from Survivors  (Observation → Cause → Fix):
+### 有效因子与创新方向分析：
+以下是基于近期成功案例及其有效原因构建的精简 CoT 风格摘要。
+幸存者迷你链（观察 → 原因 → 修复）：
 {effective_CoT}
 
-Based on these strengths, use them as heuristic inspiration to guide new factor creation, rather than copying the original principles.
-Seek innovative methods to generate more efficient, robust, and adaptable factors, ensuring they work well in diverse market conditions while avoiding look-ahead/leakage and redundancy."""
+基于这些优势，将它们作为启发式灵感来指导新因子创建，而非复制原始原则。
+寻求创新方法以生成更高效、稳健、适应性强的因子，确保它们在多样化市场条件下表现良好，同时避免前视/泄漏和冗余。"""
 
 _INEFFECTIVE_ANALYSIS = """---
-### Analysis of Ineffective Factors and Innovation Directions
-Below is a condensed CoT-style summary built from recent failure cases and why they fail.
-Mini-Chain from Failures (Observation → Cause → Fix):
+### 无效因子与创新方向分析
+以下是基于近期失败案例及其失败原因构建的精简 CoT 风格摘要。
+失败链（观察 → 原因 → 修复）：
 {ineffective_CoT}
 
-Based on these failures, use them as heuristic warnings to inform new factor creation, rather than simply avoiding similar issues.
-Seek innovative methods to generate more effective, robust, and adaptable factors, ensuring they work well in diverse market conditions."""
+基于这些失败，将它们作为启发式警告来指导新因子创建，而非仅仅避免类似问题。
+寻求创新方法以生成更有效、稳健、适应性强的因子，确保它们在多样化的市场条件下表现良好。"""
 
-_EFFECTIVE_SUMMARY = """You are given several factor functions in the format:
+_EFFECTIVE_SUMMARY = """你将获得以下格式的若干因子函数：
 
 [factor-N]
-State: valid
-Metrics: IC / RankIC / ICIR / RankICIR
-Code:
+状态：有效
+指标：IC / RankIC / ICIR / RankICIR
+代码：
 [function-N]
-def <factor_name>(df):
+def <factor_name>(df)：
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
-    # factor computation
+    # 因子计算
     return df_copy['<factor_name>']
 [/function-N]
 [/factor-N]
 
-You are tasked with analyzing the given financial factors. For each factor, provide the following in a clear and structured format:
-1. **One Clear Idea**: one sentence stating the core intuition only.
-2. **Short Formula**: a single one-line math/pseudocode expression in backticks that represents the factor (no comments, no extra code)
-3. **Efficiency Analysis**: In one sentence, explain why this factor is likely to be effective in real-world financial models (e.g., solid economic intuition, robustness across regimes, low redundancy, and no look-ahead/leakage).
-IMPORTANT: Do not modify the factor names or codes in any way. Use the exact same name as input.
-Return your answer in the following format:
-<factor_name>:
-**One Clear Idea**: <description>
-**Short Formula**: `<one-line formula>`
-**Efficiency Analysis**: <analysis>
+你的任务是分析给定的金融因子。对每个因子，请按清晰结构化格式提供以下内容：
+1. **一个清晰的想法**：仅用一句话陈述核心直觉。
+2. **简短公式**：用反引号括起来的单行数学/伪代码表达式，代表该因子（无注释，无额外代码）
+3. **效率分析**：用一句话解释该因子为何可能在真实金融模型中有效（如：扎实的经济直觉、跨机制的稳健性、低冗余、无前视/泄漏）。
+重要：请勿以任何方式修改因子名称或代码。使用与输入完全相同的名称。
+请按以下格式返回答案：
+<因子名称>：
+**一个清晰的想法**：<描述>
+**简短公式**：`<单行公式>`
+**效率分析**：<分析>
 
 {factor_names}
 
 {factor_examples}"""
 
-_INEFFECTIVE_SUMMARY = """You are given several factor functions in the format:
+_INEFFECTIVE_SUMMARY = """你将获得以下格式的若干因子函数：
             [factor-N]
-            State: low_metrics / dependent / unstable
-            Metrics: IC / RankIC / ICIR / RankICIR
-            Code:
+            状态：低指标 / 依赖 / 不稳定
+            指标：IC / RankIC / ICIR / RankICIR
+            代码：
             [function-N]
-                def <factor_name>(df):
+                def <factor_name>(df)：
                     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
                     df_copy = df.copy()
-                    # factor computation
+                    # 因子计算
                     return df_copy['<factor_name>']
             [/function-N]
             [/factor-N]
 
-            You are tasked with analyzing the given financial factors. For each factor, provide the following in a clear and structured format:
-            1. **One Clear Idea**: one sentence stating the core intuition only.
-            2. **Short Formula**: a single one-line math/pseudocode expression in backticks that represents the factor (no comments, no extra code)
-            3. **Failure Analysis**: Identify potential issues or reasons why the factor might fail or be ineffective in its current design. Explain in one sentence why the factor would not perform well in real-world financial models or why it might not produce reliable results.
-            IMPORTANT: Do not modify the factor names or codes in any way. Use the exact same name as input.
-            Return your answer in the following format:
-            <factor_name>:
-                **One Clear Idea**: <description>
-                **Short Formula**: `<one-line formula>`
-                **Failure Analysis**: <analysis>
+            你的任务是分析给定的金融因子。对每个因子，请按清晰结构化格式提供以下内容：
+            1. **一个清晰的想法**：仅用一句话陈述核心直觉。
+            2. **简短公式**：用反引号括起来的单行数学/伪代码表达式，代表该因子（无注释，无额外代码）
+            3. **失败分析**：识别该因子在当前设计下可能失败或无效的潜在问题或原因。用一句话解释为何该因子在真实金融模型中表现不佳或可能产生不可靠结果。
+            重要：请勿以任何方式修改因子名称或代码。使用与输入完全相同的名称。
+            请按以下格式返回答案：
+            <因子名称>：
+                **一个清晰的想法**：<描述>
+                **简短公式**：`<单行公式>`
+                **失败分析**：<分析>
 
 {factor_names}
 
 {factor_examples}"""
 
-_GUIDANCE_PARAPHRASE = """You are an expert prompt rewriter for quantitative-AI research agents.
+_GUIDANCE_PARAPHRASE = """你是量化 AI 研究代理的专业提示词重写者。
 
-Paraphrase the following factor guidance with a **{rewrite_style}** level of modification.
-Available rewrite styles:
-- light → minimal rewording, keep almost identical meaning.
-- moderate → natural rephrasing with light enrichment or variation.
-- creative → expressive, slightly more imaginative or research-styled rephrasing.
-- divergent → exploratory rewrite from a new but relevant analytical angle.
-- concrete → make the content **more specific, measurable, and implementation-oriented**
-(e.g., add examples of formulas, ratios, or statistical procedures), while keeping the same structure and direction.
+用 **{rewrite_style}** 级别的修改度改写以下因子指导。
+可用的重写风格：
+- light → 最小改动，保持几乎相同的含义。
+- moderate → 自然改写，带有轻度丰富或变化。
+- creative → 表达性强，略带想象力或研究风格的改写。
+- divergent → 从新的但相关的分析角度进行探索性重写。
+- concrete → 使内容 **更具体、可度量、更易实施**
+（例如，添加公式、比率或统计过程的示例），同时保持相同的结构和方向。
 
-Rules:
-- Keep the **same markdown heading, indentation, and bullet structure**.
-- Preserve the **core topic and intent** — do not shift domains.
-- Maintain a **technical, analytical tone** suitable for factor design.
-- Stay within ±25% of the original length.
-- Output only the rewritten markdown text, no explanations.
+规则：
+- 保持 **相同的 markdown 标题、缩进和列表结构**。
+- 保持 **核心主题和意图** — 不要转换领域。
+- 保持适合因子设计的 **技术性、分析性语气**。
+- 保持在原长度的 ±25% 范围内。
+- 仅输出重写后的 markdown 文本，无解释。
 
-Input:
+输入：
 {guidance}
 
-Output:"""
+输出："""
 
 # --------------------------------------------------------------------------- #
 # Seven-level agent hierarchy: agent_id -> (level, intro, guidance)
@@ -221,497 +221,497 @@ _LEVEL_VI = 'Level VI - Stability and Regime-Gating'
 _LEVEL_VII = 'Level VII - Geometric and Fusion'
 
 # ----- Level I - Market Structure and Cycle -----
-_INTRO_MARKET_CYCLE = """You are an expert in **market cycle and phase-state modeling** using daily OHLCV data.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_MARKET_CYCLE = """你是使用每日 OHLCV 数据、精通 **市场周期与阶段状态建模** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-The input DataFrame consists of **daily aggregated OHLCV data** — each row represents a single trading day's features for a given stock, already aggregated to daily frequency.
+输入 DataFrame 由 **每日聚合的 OHLCV 数据** 构成 — 每行代表给定股票单个交易日的特征，已聚合到日频。
 
-Please generate **{num_per_request} new and original market-cycle-oriented alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、面向市场周期的 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Try to reveal hidden cyclicality, rhythm, or alternating phases in the price–volatility structure.
-Avoid simple moving-average crossovers or standard trend indicators; seek higher-level temporal dynamics."""
+尝试揭示价格-波动率结构中隐藏的周期性、节奏或交替阶段。
+避免简单的均线交叉或标准趋势指标；寻求更高层次的时间动态。"""
 
-_GUIDANCE_MARKET_CYCLE = """### Factor Design Guidance: Market Cycle Exploration
+_GUIDANCE_MARKET_CYCLE = """### 因子设计指南： Market Cycle Exploration
 
-Investigate periodic or phase-shift patterns from OHLCV sequences:
+从 OHLCV 序列中研究周期性或相移模式：
 
-- smooth transformations of returns or log(price) to reveal cyclical oscillations;
-- phase difference between short-term and long-term smoothed price signals;
-- normalized curvature of cumulative returns or EMA trajectories;
-- alternating volatility compression/expansion interpreted as "cycle turns";
-- dynamic amplitude measures (e.g., ratio of short/long energy in returns).
+- 对收益或 log(价格) 做平滑变换，以揭示周期振荡；
+- 短期与长期平滑价格信号之间的相位差；
+- 累计收益或 EMA 轨迹的归一化曲率；
+- 将交替的波动率压缩/扩张解释为"周期转折"；
+- 动态幅度度量（如收益中短/长周期能量之比）。
 
-Encourage creativity: discover alternative representations of cyclical energy, hidden harmonics, or state oscillations beyond conventional moving averages."""
+鼓励创新：超越常规移动平均，发现周期能量、隐藏谐波或状态振荡的替代表示。"""
 
-_INTRO_VOLATILITY_REGIME = """You are an expert in **volatility regime and state transition modeling** using daily OHLCV data.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_VOLATILITY_REGIME = """你是使用每日 OHLCV 数据、精通 **波动率制度与状态转换建模** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-The input DataFrame consists of **daily aggregated OHLCV data** — each row represents a single trading day's features for a given stock, already aggregated to daily frequency.
+输入 DataFrame 由 **每日聚合的 OHLCV 数据** 构成 — 每行代表给定股票单个交易日的特征，已聚合到日频。
 
-Please generate **{num_per_request} new and original volatility-regime-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、基于波动率制度的 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Focus on identifying smooth transitions between calm and turbulent regimes, volatility clustering, and regime persistence patterns.
-Avoid simple realized volatility measures; aim to uncover latent state dynamics and regime durability."""
+专注于识别平静与动荡制度之间的平滑转换、波动率聚集以及制度持续性模式。
+避免简单的已实现波动率度量；旨在揭示潜在的状态动态与制度耐久性。"""
 
-_GUIDANCE_VOLATILITY_REGIME = """### Factor Design Guidance: Volatility Regime Discovery
+_GUIDANCE_VOLATILITY_REGIME = """### 因子设计指南： Volatility Regime Discovery
 
-Characterize volatility regimes using OHLCV-only information:
+仅使用 OHLCV 信息刻画波动率制度：
 
-- ratios of short-term vs long-term true range or realized volatility;
-- persistence of high/low volatility conditions (e.g., EMA of volatility indicator);
-- volatility-of-volatility and its acceleration or deceleration;
-- entropy or smoothness of range changes to detect transitions;
-- normalized volatility pressure score: (short_vol - long_vol)/(short_vol + long_vol + ε).
+- 短期与长期真实区间或已实现波动率之比；
+- 高/低波动状态的持续性（如波动率指标的 EMA）；
+- 波动率的波动率及其加速或减速；
+- 区间变化的熵或平滑度，用于检测状态转换；
+- 归一化波动压力得分：(short_vol - long_vol)/(short_vol + long_vol + ε)。
 
-Seek creative encodings of regime shifts: smooth continuous state scores, volatility phase transitions, or pre-transition buildup indicators that differ from conventional ATR-based metrics."""
+寻求制度转换的创造性编码：平滑的连续状态得分、波动率相位转换，或不同于常规基于 ATR 指标的转换前累积指标。"""
 
 # ----- Level II - Extreme Risk and Fragility -----
-_INTRO_CRASH_PREDICTOR = """You are an expert in **crash prediction and fragility modeling** using daily OHLCV data.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_CRASH_PREDICTOR = """你是使用每日 OHLCV 数据、精通 **崩盘预测与脆弱性建模** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-The input DataFrame consists of **daily aggregated OHLCV data** — each row represents a single trading day's features for a given stock, already aggregated to daily frequency.
+输入 DataFrame 由 **每日聚合的 OHLCV 数据** 构成 — 每行代表给定股票单个交易日的特征，已聚合到日频。
 
-Please generate **{num_per_request} new and original crash-predictive alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、预测崩盘的 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Focus on identifying early warning signals of potential crashes: volatility compression, skewed price movement, rapid liquidity withdrawal, or fragile state buildup.
-Avoid standard realized volatility or volume spikes; instead, express instability in a creative, quantitative way."""
+专注于识别潜在崩盘的早期预警信号：波动率压缩、倾斜的价格运动、快速流动性撤离或脆弱状态累积。
+避免标准的已实现波动率或成交量尖峰；而是以有创意的量化方式表达不稳定性。"""
 
-_GUIDANCE_CRASH_PREDICTOR = """### Factor Design Guidance: Crash-Predictive Feature Discovery
+_GUIDANCE_CRASH_PREDICTOR = """### 因子设计指南： Crash-Predictive Feature Discovery
 
-Detect pre-crash or instability signals from OHLCV time series:
+从 OHLCV 时间序列中检测崩盘前或不稳定信号：
 
-- price–volume co-movement anomalies (e.g., rising volume + stagnating price);
-- volatility compression followed by micro-expansions (energy buildup);
-- clustering of small-range bars before large breaks;
-- instability score: ratio of realized vol decay to liquidity drop;
-- cumulative skew or bias within short windows (persistent drift toward one side).
+- 量价共动异常（如成交量上升 + 价格停滞）；
+- 波动率压缩后伴随微观扩张（能量累积）；
+- 大突破前的小区间 K 线聚集；
+- 不稳定得分：已实现波动衰减与流动性下降之比；
+- 短窗口内的累计偏斜或偏差（持续向一侧漂移）。
 
-Be imaginative: represent latent fragility or crash precursors as structural imbalances,
-not as explicit drawdowns. Emphasize non-linear buildup, instability asymmetry, or "pre-failure" rhythms detectable before regime collapses."""
+发挥想象力：将潜在脆弱性或崩盘前兆表示为结构性失衡，
+而非显式回撤。强调非线性累积、不稳定不对称，或在制度崩溃前可检测的"崩溃前"节律。"""
 
-_INTRO_TAIL_RISK = """You are an expert in **tail-risk and downside sensitivity modeling** using daily OHLCV data.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_TAIL_RISK = """你是使用每日 OHLCV 数据、精通 **尾部风险与下行敏感性建模** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-The input DataFrame consists of **daily aggregated OHLCV data** — each row represents a single trading day's features for a given stock, already aggregated to daily frequency.
+输入 DataFrame 由 **每日聚合的 OHLCV 数据** 构成 — 每行代表给定股票单个交易日的特征，已聚合到日频。
 
-Please generate **{num_per_request} new and original tail-risk-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、基于尾部风险的 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Focus on detecting risk asymmetry, fat-tail dynamics, and downside clustering patterns.
-Avoid trivial volatility measures; instead, capture how negative shocks propagate or accumulate across days."""
+专注于检测风险不对称、肥尾动态和下行聚集模式。
+避免琐碎的波动率度量；相反，捕捉负向冲击如何在多日间传播或累积。"""
 
-_GUIDANCE_TAIL_RISK = """### Factor Design Guidance: Tail-Risk Alpha Construction
+_GUIDANCE_TAIL_RISK = """### 因子设计指南： Tail-Risk Alpha Construction
 
-Model asymmetric or non-Gaussian behavior of returns and price volatility:
+对收益和价格波动率的非对称或非高斯行为建模：
 
-- lower partial moments, downside deviation, or semivariance proxies;
-- drawdown persistence and recovery intensity;
-- tail-thickness indicators via high quantile deviation or exponential weighting;
-- return compression before large downward moves (volatility squeeze);
-- dynamic skewness or asymmetry between upside and downside volatility.
+- 低阶偏矩、下行偏差或半方差代理；
+- 回撤持续性和恢复强度；
+- 通过高分位数偏差或指数加权得到的尾部厚度指标；
+- 大幅下行前的收益压缩（波动率挤压）；
+- 上行与下行波动率之间的动态偏斜或不对称。
 
-Encourage innovation: create interpretable, numerically stable measures reflecting vulnerability to large losses, extreme return clustering, or asymmetric stress buildup unseen in standard volatility or beta metrics."""
+鼓励创新：创建可解释、数值稳定的度量，反映标准波动率或 beta 指标中未见的大额损失脆弱性、极端收益聚集或不对称压力累积。"""
 
 # ----- Level III - Price-Volume Dynamics -----
-_INTRO_LIQUIDITY = """You are an expert in **liquidity and transaction-cost** modeling using daily OHLCV.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_LIQUIDITY = """你是使用每日 OHLCV、精通 **流动性与交易成本** 建模的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-The input DataFrame consists of **daily aggregated OHLCV data** — each row represents a single trading day's features for a given stock.
+输入 DataFrame 由 **每日聚合的 OHLCV 数据** 构成 — 每行代表给定股票单个交易日的特征。
 
-Please generate **{num_per_request} new and original liquidity-oriented alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、面向流动性的 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Aim to reflect trading frictions, market depth, and price-impact sensitivity implied by OHLCV alone. Encourage creative, compact constructions rather than generic recipes."""
+旨在反映仅由 OHLCV 隐含的交易摩擦、市场深度和价格冲击敏感性。鼓励有创意、紧凑的构造，而非通用套路。"""
 
-_GUIDANCE_LIQUIDITY = """### Factor Design Guidance: Liquidity & Impact
+_GUIDANCE_LIQUIDITY = """### 因子设计指南： Liquidity & Impact
 
-Explore liquidity from multiple angles, combining price moves and activity:
+结合价格变动和活跃度，从多个角度探索流动性：
 
-- impact intuition: how much price movement occurs per unit of activity (volume or dollarized proxy);
-- participation & crowding: turnover intensity, its variability, and persistence of thin/rich liquidity states;
-- shock absorption: recovery speed of liquidity after spikes/dry-ups;
-- scale & normalization: stabilize by price level/range and use gentle bounding (clip/tanh) only when needed;
-- regime awareness (soft): let features respond differently in compressed vs expanded ranges.
+- 冲击直觉：每单位活跃度（成交量或美元化代理）对应多少价格变动；
+- 参与度与拥挤：换手强度、其变异性，以及稀薄/充裕流动性状态的持续性；
+- 冲击吸收：流动性在尖峰/干涸后的恢复速度；
+- 尺度与归一化：按价格水平/区间稳定，仅在必要时使用温和的界限（clip/tanh）；
+- 制度感知（软）：让特征在压缩与扩张区间中做出不同响应。
 
-Keep formulas short (1–3 steps), numerically safe (add ε where needed), and strictly OHLCV-based."""
+保持公式简短（1–3 步）、数值安全（需要处加 ε），且严格基于 OHLCV。"""
 
-_INTRO_ORDER_IMBALANCE = """You are an expert in **order-imbalance and directional pressure** modeling using daily OHLCV (no L2, no VWAP).
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
-
-{columns_desc}
-
-The input DataFrame consists of **daily aggregated OHLCV data** — each row represents a single trading day's features for a given stock.
-
-Please generate **{num_per_request} new and original order-imbalance alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
-
-Think in terms of one-sided participation and pressure persistence inferred from price direction and activity proxies. Keep designs compact and robust."""
-
-_GUIDANCE_ORDER_IMBALANCE = """### Factor Design Guidance: Directional Pressure from OHLCV
-
-Infer buy/sell pressure without microstructure feeds:
-
-- direction × intensity: couple return or (close−open) with standardized volume/turnover;
-- gap-informed pressure: relate overnight direction to same-day activity and close location-in-range;
-- persistence & decay: smoothed imbalance streaks and their fading profile;
-- asymmetry: treat positive vs negative pressure differently when ranges are compressed/expanded;
-- guardrails: normalize by range or price·volume scale; apply soft bounding only if necessary.
-
-Prioritize interpretability and stability; keep to 1–3 coherent steps per factor, using OHLCV only."""
-
-_INTRO_PRICE_VOLUME_COHERENCE = """You are an expert in **price–volume coherence** for daily OHLCV time series.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_ORDER_IMBALANCE = """你是使用每日 OHLCV（无 L2、无 VWAP）、精通 **订单失衡与方向压力** 建模的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-The input DataFrame consists of **daily aggregated OHLCV data** — each row represents a single trading day's features for a given stock.
+输入 DataFrame 由 **每日聚合的 OHLCV 数据** 构成 — 每行代表给定股票单个交易日的特征。
 
-Please generate **{num_per_request} new and original price–volume-coherence alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、订单失衡类 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Seek signatures of alignment, divergence, and lead–lag between price changes and activity. Favor concise, innovative constructs over standard correlations."""
+从价格方向与活跃度代理推断的单边参与和压力持续性角度思考。保持设计紧凑且稳健。"""
 
-_GUIDANCE_PRICE_VOLUME_COHERENCE = """### Factor Design Guidance: Coherence & Lead–Lag
+_GUIDANCE_ORDER_IMBALANCE = """### 因子设计指南： Directional Pressure from OHLCV
 
-Capture how price and activity move together (or fail to):
+在没有微观结构数据的情况下推断买卖压力：
 
-- synchronicity: compact measures of co-movement between returns and Δlog(volume);
-- lead–lag: simple lagged associations (price following activity, or activity following price);
-- stability: smoothed magnitude of coherence and its variability across nearby subwindows;
-- divergence: highlight episodes of large price move with muted activity (and vice versa);
-- normalization: range- or z-based stabilization to ensure comparability through time.
+- 方向 × 强度：将收益或 (close−open) 与标准化成交量/换手相结合；
+- 缺口感知压力：将隔夜方向与当日活跃度及收盘位置（区间内）联系起来；
+- 持续性与衰减：平滑的失衡连串及其衰减轮廓；
+- 不对称：在区间压缩/扩张时区别对待正负压力；
+- 护栏：按区间或价格·成交量尺度归一化；仅在必要时应用软界限。
 
-Keep formulas minimal (1–3 steps), numerically stable, and OHLCV-only. Encourage novel yet interpretable definitions of "coherence."""
+优先考虑可解释性和稳定性；每个因子保持 1–3 个连贯步骤，仅使用 OHLCV。"""
 
-_INTRO_VOLUME_STRUCTURE = """You are an expert in **volume structure and distribution dynamics** using daily OHLCV.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_PRICE_VOLUME_COHERENCE = """你是精通每日 OHLCV 时间序列 **量价协同** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-The input DataFrame consists of **daily aggregated OHLCV data** — each row represents a single trading day's features for a given stock.
+输入 DataFrame 由 **每日聚合的 OHLCV 数据** 构成 — 每行代表给定股票单个交易日的特征。
 
-Please generate **{num_per_request} new and original volume-structure alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、量价协同类 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Focus on shape, concentration, variability, and organization of volume over time (not price itself). Encourage creative, parsimonious formulations."""
+寻求价格变化与活跃度之间的一致、背离和领先-滞后特征。偏好简洁、创新的构造，而非标准相关性。"""
 
-_GUIDANCE_VOLUME_STRUCTURE = """### Factor Design Guidance: Volume Shape & Organization
+_GUIDANCE_PRICE_VOLUME_COHERENCE = """### 因子设计指南： Coherence & Lead–Lag
 
-Describe how trading activity is distributed and evolves:
+捕捉价格与活跃度如何同向运动（或未能同向）：
 
-- concentration vs dispersion: compact proxies for volume concentration, inequality, or clustering;
-- burstiness: frequency and intensity of spikes relative to a robust baseline;
-- asymmetry & tails: simple skew/kurtosis-style indicators with stabilization;
-- multi-horizon organization: short vs long activity balance and its persistence;
-- hygiene: robust scaling (median/IQR), gentle clipping when needed, and limited-step formulas.
+- 同步性：收益与 Δlog(成交量) 共动的紧凑度量；
+- 领先-滞后：简单的滞后关联（价格跟随活跃度，或活跃度跟随价格）；
+- 稳定性：协同度平滑后的幅度及其在邻近子窗口间的变异性；
+- 背离：突出价格大幅变动但活跃度低迷（及反之）的情形；
+- 归一化：基于区间或 z 的稳定化，以确保跨时间可比。
 
-Use OHLCV only; aim for interpretable, low-complexity functions that expose the structure and rhythm of participation."""
+保持公式极简（1–3 步）、数值稳定，且仅基于 OHLCV。鼓励对"协同"的新颖且可解释的定义。"""
+
+_INTRO_VOLUME_STRUCTURE = """你是使用每日 OHLCV、精通 **成交量结构与分布动态** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
+
+{columns_desc}
+
+输入 DataFrame 由 **每日聚合的 OHLCV 数据** 构成 — 每行代表给定股票单个交易日的特征。
+
+请生成 **{num_per_request} 个新颖且原创的、成交量结构类 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
+
+专注于成交量随时间变化的形态、集中度、变异性和组织性（而非价格本身）。鼓励有创意、简约的表述。"""
+
+_GUIDANCE_VOLUME_STRUCTURE = """### 因子设计指南： Volume Shape & Organization
+
+描述交易活跃度如何分布和演化：
+
+- 集中 vs 分散：成交量集中度、不平等性或聚集的紧凑代理；
+- 突发性：相对于稳健基线的尖峰频率和强度；
+- 不对称与尾部：带稳定化的简单偏斜/峰度式指标；
+- 多周期组织：短期与长期活跃度的平衡及其持续性；
+- 卫生性：稳健缩放（中位数/IQR）、必要时温和截断，以及限制步数的公式。
+
+仅使用 OHLCV；目标是可解释、低复杂度的函数，以揭示参与的结构和节奏。"""
 
 # ----- Level IV - Price-Volatility Behavior -----
-_INTRO_DAILY_TREND = """You are an expert in **daily trend and momentum persistence modeling** using OHLCV time series.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_DAILY_TREND = """你是使用 OHLCV 时间序列、精通 **日频趋势与动量持续性建模** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-The input DataFrame consists of **daily aggregated OHLCV data** — each row represents a single trading day's features for a given stock.
+输入 DataFrame 由 **每日聚合的 OHLCV 数据** 构成 — 每行代表给定股票单个交易日的特征。
 
-Please generate **{num_per_request} new and original daily-trend-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、基于日频趋势的 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Focus on multi-day directional strength, momentum decay, and trend exhaustion. Avoid standard indicators; instead, invent compact, interpretable forms of persistence and continuation."""
+专注于多日方向强度、动量衰减和趋势耗竭。避免标准指标；相反，发明紧凑、可解释的持续性与延续性表达。"""
 
-_GUIDANCE_DAILY_TREND = """### Factor Design Guidance: Daily Trend & Momentum
+_GUIDANCE_DAILY_TREND = """### 因子设计指南： Daily Trend & Momentum
 
-Explore sustained movement or directional consistency:
+探索持续性运动或方向一致性：
 
-- multi-day momentum ratios (e.g., rolling cumulative return strength);
-- trend acceleration or deceleration using short- vs long-window returns;
-- persistence indicators: streak length, EMA of direction_sign;
-- momentum exhaustion or saturation detection (trend weakening);
-- normalized relative strength of trend to volatility.
+- 多日动量比率（如滚动累计收益强度）；
+- 使用短期与长期窗口收益判断趋势加速或减速；
+- 持续性指标：连串长度、direction_sign 的 EMA；
+- 动量耗竭或饱和检测（趋势减弱）；
+- 趋势相对波动率的归一化相对强度。
 
-Encourage originality — define novel persistence forms, smooth transitions, or asymmetric responses that differ from basic MA-cross ideas."""
+鼓励原创性 — 定义不同于基本均线交叉思路的新颖持续性形式、平滑转换或非对称响应。"""
 
-_INTRO_LAG_RESPONSE = """You are an expert in **lagged price–volume response and delayed adjustment modeling** using daily OHLCV.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
-
-{columns_desc}
-
-Each row represents one trading day of OHLCV data for a stock.
-
-Please generate **{num_per_request} new and original lag-response alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
-
-Focus on inertia, delay, and feedback effects where price reacts to prior shocks with a lag. Avoid trivial moving averages."""
-
-_GUIDANCE_LAG_RESPONSE = """### Factor Design Guidance: Lagged Dynamics
-
-Reveal delayed effects and feedback loops:
-
-- lagged correlation or signed impact between price and volume;
-- response delay: measure how current return relates to past volatility or range;
-- slow adjustment proxies: smoothed change rate of cumulative deviation;
-- volatility–trend phase mismatch indicators;
-- decay-rate estimators capturing inertia.
-
-Favor compact, interpretable representations of delayed information flow or partial mean adjustment."""
-
-_INTRO_RANGE_VOL = """You are an expert in **range-based volatility and price expansion modeling** using daily OHLCV data.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_LAG_RESPONSE = """你是使用每日 OHLCV、精通 **滞后量价响应与延迟调整建模** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-Each row represents one trading day of OHLCV data for a stock.
+每行代表某只股票一个交易日的 OHLCV 数据。
 
-Please generate **{num_per_request} new and original range-volatility alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、滞后响应类 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Focus on the dynamics of price range, compression/expansion cycles, and intraday energy buildup. Avoid copying classical Parkinson or Garman-Klass volatility."""
+专注于价格对先前冲击存在滞后反应的惯性、延迟和反馈效应。避免琐碎的移动平均。"""
 
-_GUIDANCE_RANGE_VOL = """### Factor Design Guidance: Range-Based Volatility
+_GUIDANCE_LAG_RESPONSE = """### 因子设计指南： Lagged Dynamics
 
-Quantify and interpret range variability creatively:
+揭示延迟效应和反馈回路：
 
-- normalized range changes: (high−low)/prev_range or log-ratio form;
-- rolling range entropy or compression score;
-- vol energy buildup: ratio of range expansion to recent std(price);
-- asymmetry: body-to-range ratio, upper/lower shadow bias;
-- burst detection: sustained low range followed by expansion.
+- 价格与成交量之间的滞后相关性或有符号冲击；
+- 响应延迟：度量当前收益与过去波动率或区间的关联；
+- 慢速调整代理：累计偏差的平滑变化率；
+- 波动率-趋势相位错配指标；
+- 捕捉惯性的衰减率估计器。
 
-Seek numerically stable, smooth, and interpretable constructions revealing volatility rhythm and expansion cycles."""
+偏好延迟信息流或部分均值调整的紧凑、可解释表示。"""
 
-_INTRO_REVERSAL = """You are an expert in **mean-reversion and short-term reversal** modeling using daily OHLCV.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
-
-{columns_desc}
-
-Each row represents one trading day of OHLCV data for a stock.
-
-Please generate **{num_per_request} new and original reversal-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
-
-Focus on transient mispricings, overextensions, or short-term price/volume imbalances that often revert. Avoid textbook z-score formulas; create novel, concise reversal structures."""
-
-_GUIDANCE_REVERSAL = """### Factor Design Guidance: Reversal & Mean Reversion
-
-Detect overreaction and fading trends:
-
-- short-term return overextension normalized by recent volatility;
-- reversal after range breakouts or extended streaks;
-- price displacement from smoothed baseline with reversion score;
-- volume/volatility burst exhaustion or "snapback" phenomena;
-- compact oscillation metrics emphasizing turning points.
-
-Use short horizons (3–10 days), maintain numerical stability, and favor interpretable, low-step formulations."""
-
-_INTRO_VOL_ASYMMETRY = """You are an expert in **volatility asymmetry and directional variance bias** using daily OHLCV data.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_RANGE_VOL = """你是使用每日 OHLCV 数据、精通 **基于区间的波动率与价格扩张建模** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-Each row represents one trading day of OHLCV data for a stock.
+每行代表某只股票一个交易日的 OHLCV 数据。
 
-Please generate **{num_per_request} new and original volatility-asymmetry alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、区间波动类 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Focus on detecting unequal volatility behavior between up- and down-moves, directional clustering, and asymmetric volatility shocks."""
+专注于价格区间的动态、压缩/扩张周期和日内能量累积。避免照搬经典的 Parkinson 或 Garman-Klass 波动率。"""
 
-_GUIDANCE_VOL_ASYMMETRY = """### Factor Design Guidance: Volatility Asymmetry
+_GUIDANCE_RANGE_VOL = """### 因子设计指南： Range-Based Volatility
 
-Quantify differences between positive and negative move volatility:
+创造性地量化和解释区间变异性：
 
-- separate realized volatility of up-days vs down-days;
-- signed range asymmetry: (high−close) vs (close−low);
-- skew-like ratios based on normalized directional ranges;
-- rolling contrast of volatility for gains vs losses;
-- conditional expansion: vol increases only under specific price polarity.
+- 归一化区间变化：(high−low)/prev_range 或对数比形式；
+- 滚动区间熵或压缩得分；
+- 波动能量累积：区间扩张与近期 std(价格) 之比；
+- 不对称：实体与区间之比、上/下影线偏差；
+- 爆发检测：持续低区间后伴随扩张。
 
-Keep constructions short, robust, and bounded; highlight non-linear asymmetry and volatility clustering structure within OHLCV."""
+寻求数值稳定、平滑且可解释的构造，以揭示波动节奏和扩张周期。"""
+
+_INTRO_REVERSAL = """你是使用每日 OHLCV、精通 **均值回归与短期反转** 建模的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
+
+{columns_desc}
+
+每行代表某只股票一个交易日的 OHLCV 数据。
+
+请生成 **{num_per_request} 个新颖且原创的、反转类 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
+
+专注于经常回归的暂时性错误定价、过度延伸或短期量价失衡。避免教科书式 z-score 公式；创建新颖、简洁的反转结构。"""
+
+_GUIDANCE_REVERSAL = """### 因子设计指南： Reversal & Mean Reversion
+
+检测过度反应和消退中的趋势：
+
+- 按近期波动率归一化的短期收益过度延伸；
+- 区间突破或长时间连串后的反转；
+- 价格偏离平滑基线的位移，并给出回归得分；
+- 成交量/波动率爆发的耗竭或"回弹"现象；
+- 强调转折点的紧凑振荡度量。
+
+使用短周期（3–10 天），保持数值稳定，并偏好可解释、低步数的表述。"""
+
+_INTRO_VOL_ASYMMETRY = """你是使用每日 OHLCV 数据、精通 **波动率不对称与方向性方差偏差** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
+
+{columns_desc}
+
+每行代表某只股票一个交易日的 OHLCV 数据。
+
+请生成 **{num_per_request} 个新颖且原创的、波动率不对称类 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
+
+专注于检测上涨与下跌之间不平等的波动行为、方向聚集以及不对称的波动冲击。"""
+
+_GUIDANCE_VOL_ASYMMETRY = """### 因子设计指南： Volatility Asymmetry
+
+量化上涨与下跌波动率之间的差异：
+
+- 分别计算上涨日与下跌日的已实现波动率；
+- 有符号区间不对称：(high−close) 与 (close−low)；
+- 基于归一化方向区间的类偏斜比率；
+- 收益与损失波动率的滚动对比；
+- 条件性扩张：波动率仅在特定价格极性下增加。
+
+保持构造简短、稳健且有界；突出 OHLCV 内部的非线性不对称和波动率聚集结构。"""
 
 # ----- Level V - Multi-Scale Complexity -----
-_INTRO_DRAWDOWN = """You are an expert in **drawdown and recovery path modeling** using daily OHLCV data.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_DRAWDOWN = """你是使用每日 OHLCV 数据、精通 **回撤与恢复路径建模** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-Each row represents one trading day of OHLCV data for a stock.
+每行代表某只股票一个交易日的 OHLCV 数据。
 
-Please generate **{num_per_request} new and original drawdown-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、基于回撤的 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Focus on the geometry of loss and recovery—how fast, deep, and persistent drawdowns form and resolve. Avoid simple max-min metrics; emphasize structural understanding of drawdown behavior."""
+专注于损失与恢复的几何形态 — 回撤如何快速、深入且持续地形成和消解。避免简单的最大-最小指标；强调对回撤行为的结构性理解。"""
 
-_GUIDANCE_DRAWDOWN = """### Factor Design Guidance: Drawdown Dynamics
+_GUIDANCE_DRAWDOWN = """### 因子设计指南： Drawdown Dynamics
 
-Design compact, interpretable representations of risk path and resilience:
+设计风险路径与韧性的紧凑、可解释表示：
 
-- rolling drawdown depth and recovery ratio;
-- local maximum-to-trough slope normalized by duration;
-- drawdown volatility or "drawdown velocity" proxy;
-- asymmetry between drawdown and rebound speed;
-- decay of cumulative losses before recovery triggers.
+- 滚动回撤深度和恢复比率；
+- 按持续时间归一化的局部峰-谷斜率；
+- 回撤波动率或"回撤速度"代理；
+- 回撤与反弹速度之间的不对称；
+- 恢复触发前累计损失的衰减。
 
-Keep formulas short (1–3 steps), stable, and OHLCV-only. Highlight timing asymmetry and resilience intensity, not static loss magnitude."""
+保持公式简短（1–3 步）、稳定且仅基于 OHLCV。突出时间不对称和韧性强度，而非静态损失幅度。"""
 
-_INTRO_FRACTAL = """You are an expert in **fractal and multi-scale complexity modeling** using daily OHLCV data.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
-
-{columns_desc}
-
-Each row represents one trading day of OHLCV data for a stock.
-
-Please generate **{num_per_request} new and original fractal-complexity alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
-
-Focus on irregularity, scaling behavior, and long-memory structure in price dynamics. Avoid explicitly computing Hurst exponents; instead, find simple, differentiable proxies that express self-similarity or structural complexity."""
-
-_GUIDANCE_FRACTAL = """### Factor Design Guidance: Fractal & Multi-Scale Behavior
-
-Derive compact proxies for complexity and persistence across scales:
-
-- ratio of multi-window volatilities (short vs long horizon variability);
-- variance-of-variance or volatility roughness score;
-- local scaling slope between different rolling ranges or std windows;
-- oscillation frequency: count of zero-crossings in detrended returns;
-- persistence index: normalized cumulative sign-consistency.
-
-Encourage creative constructs that summarize roughness, self-similarity, or temporal irregularity.
-Use only OHLCV and simple rolling statistics; keep outputs stable and interpretable."""
-
-_INTRO_HERDING = """You are an expert in **herding behavior and crowding pattern modeling** using daily factors.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_FRACTAL = """你是使用每日 OHLCV 数据、精通 **分形与多尺度复杂度建模** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-Please generate **{num_per_request} new and original herding-behavior alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+每行代表某只股票一个交易日的 OHLCV 数据。
 
-Focus on identifying collective, synchronous market reactions or overcrowded directional alignment inferred from existing factors.
-Avoid literal "investor sentiment" proxies; instead, express herding via statistical convergence or one-sided participation dynamics."""
+请生成 **{num_per_request} 个新颖且原创的、分形复杂度类 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-_GUIDANCE_HERDING = """### Factor Design Guidance: Herding & Crowding Behavior
+专注于价格动态中的不规则性、标度行为和长记忆结构。避免显式计算 Hurst 指数；相反，寻找表达自相似性或结构复杂性的简单、可微代理。"""
 
-Quantify alignment and overconcentration effects:
+_GUIDANCE_FRACTAL = """### 因子设计指南： Fractal & Multi-Scale Behavior
 
-- crowding intensity: ratio of directional persistence to volatility dispersion;
-- participation imbalance: sustained same-sign momentum + volume clustering;
-- autocorrelation of signed returns as proxy for synchronized trading;
-- volatility narrowing during uniform directional flows;
-- deherding bursts: abrupt transition from tight to dispersed movement.
+推导跨尺度的复杂度和持续性紧凑代理：
 
-Encourage conceptual depth: translate collective behavior into numerical proxies for crowding, overreaction, or premature consensus — all inferred from existing factors."""
+- 多窗口波动率之比（短期与长期周期变异性）；
+- 方差之方差或波动粗糙度得分；
+- 不同滚动区间或标准差窗口之间的局部标度斜率；
+- 振荡频率：去趋势收益中穿越零点的次数；
+- 持续性指数：归一化的累计符号一致性。
+
+鼓励用有创意的构造来概括粗糙度、自相似性或时间不规则性。
+仅使用 OHLCV 和简单的滚动统计；保持输出稳定且可解释。"""
+
+_INTRO_HERDING = """你是使用日频因子、精通 **羊群行为与拥挤模式建模** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
+
+{columns_desc}
+
+请生成 **{num_per_request} 个新颖且原创的、羊群行为类 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
+
+专注于识别从现有因子推断出的集体、同步市场反应或过度拥挤的方向一致。
+避免字面的"投资者情绪"代理；相反，通过统计收敛或单边参与动态来表达羊群行为。"""
+
+_GUIDANCE_HERDING = """### 因子设计指南： Herding & Crowding Behavior
+
+量化一致性和过度集中效应：
+
+- 拥挤强度：方向持续性与波动离散度之比；
+- 参与失衡：持续同向动量 + 成交量聚集；
+- 有符号收益的自相关作为同步交易的代理；
+- 均匀方向流动期间的波动率收窄；
+- 去羊群爆发：从紧密到分散运动的突变。
+
+鼓励概念深度：将集体行为转化为拥挤、过度反应或过早共识的数值代理 — 全部从现有因子推断。"""
 
 # ----- Level VI - Stability and Regime-Gating -----
-_INTRO_REGIME_GATING = """You are an expert in **regime gating and adaptive signal activation** using daily OHLCV data.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_REGIME_GATING = """你是使用每日 OHLCV 数据、精通 **制度门控与自适应信号激活** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-Each row represents one trading day of OHLCV data for a stock.
+每行代表某只股票一个交易日的 OHLCV 数据。
 
-Please generate **{num_per_request} new and original regime-gating alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、制度门控类 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Your goal is to model conditional activation of signals — where factor strength or relevance depends on volatility, trend, or liquidity regime.
-Avoid static filters; instead, design adaptive gates that dynamically scale or modulate factor sensitivity based on regime changes."""
+你的目标是建模信号的条件激活 — 即因子强度或相关性取决于波动率、趋势或流动性制度。
+避免静态过滤器；相反，设计根据制度变化动态缩放或调制因子敏感度的自适应门控。"""
 
-_GUIDANCE_REGIME_GATING = """### Factor Design Guidance: Regime Gating Mechanisms
+_GUIDANCE_REGIME_GATING = """### 因子设计指南： Regime Gating Mechanisms
 
-Discover simple yet powerful gating functions that adapt to market conditions:
+发现适应市场条件的简单而强大的门控函数：
 
-- volatility-sensitive gating: scale signal intensity by normalized volatility level;
-- trend-aware gating: activate only when directional persistence exceeds a threshold;
-- liquidity gating: suppress signal under extremely low volume;
-- asymmetric gating: respond differently in bullish vs bearish microstates;
-- soft transitions: use continuous scaling (sigmoid/tanh) to ensure smooth adaptability.
+- 波动率敏感门控：按归一化波动水平缩放信号强度；
+- 趋势感知门控：仅当方向持续性超过阈值时激活；
+- 流动性门控：在成交量极低时抑制信号；
+- 不对称门控：在牛市与熊市微观状态下做出不同响应；
+- 软转换：使用连续缩放（sigmoid/tanh）以确保平滑适应性。
 
-Encourage creative activation designs: compact functions that turn existing OHLCV-derived signals "on/off" depending on state context, without relying on future data."""
+鼓励创造性的激活设计：根据状态情境开/关现有 OHLCV 派生信号的紧凑函数，且不依赖未来数据。"""
 
-_INTRO_STABILITY = """You are an expert in **signal and return stability analysis** using daily OHLCV data.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_STABILITY = """你是使用每日 OHLCV 数据、精通 **信号与收益稳定性分析** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-Each row represents one trading day of OHLCV data for a stock.
+每行代表某只股票一个交易日的 OHLCV 数据。
 
-Please generate **{num_per_request} new and original stability-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、基于稳定性的 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Focus on persistence, noise filtering, and robustness of price dynamics.
-Avoid trivial variance measures; instead, quantify temporal consistency and structural smoothness of returns, ranges, or derived signals."""
+专注于价格动态的持续性、噪声过滤和稳健性。
+避免琐碎的方差度量；相反，量化收益、区间或派生信号的时间一致性和结构平滑性。"""
 
-_GUIDANCE_STABILITY = """### Factor Design Guidance: Temporal Stability & Consistency
+_GUIDANCE_STABILITY = """### 因子设计指南： Temporal Stability & Consistency
 
-Build measures of predictability, continuity, or resilience:
+构建可预测性、连续性或韧性的度量：
 
-- rolling variance ratio between short-term and long-term windows;
-- trend or volatility "smoothness" (ratio of mean to std of incremental changes);
-- sign-change frequency (directional stability index);
-- volatility-of-volatility (metavolatility) decay;
-- normalized stability metrics emphasizing steady vs chaotic behavior.
+- 短期与长期窗口之间的滚动方差比；
+- 趋势或波动率的"平滑度"（增量变化均值与标准差之比）；
+- 符号变化频率（方向稳定性指数）；
+- 波动率的波动率（元波动）衰减；
+- 强调平稳与混沌行为的归一化稳定性度量。
 
-Encourage interpretability and numerical robustness: define compact indicators that express whether the underlying dynamics are stable, persistent, or erratic — all using only OHLCV inputs."""
+鼓励可解释性和数值稳健性：定义表达底层动态是稳定、持续还是无序的紧凑指标 — 全部仅使用 OHLCV 输入。"""
 
 # ----- Level VII - Geometric and Fusion -----
-_INTRO_BAR_SHAPE = """You are an expert in **candlestick geometry and bar-shape pattern analysis** using daily factors.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_BAR_SHAPE = """你是使用日频因子、精通 **K 线几何与 K 线形状模式分析** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-Please generate **{num_per_request} new and original bar-shape-based alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、基于 K 线形状的 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Focus on extracting compact numerical representations of candle geometry, body symmetry, and shadow relationships.
-Avoid simple pattern labeling; design continuous and interpretable shape metrics."""
+专注于提取 K 线几何、实体对称性和影线关系的紧凑数值表示。
+避免简单模式标注；设计连续且可解释的形状度量。"""
 
-_GUIDANCE_BAR_SHAPE = """### Factor Design Guidance: Bar Shape & Geometry
+_GUIDANCE_BAR_SHAPE = """### 因子设计指南： Bar Shape & Geometry
 
-Translate candle geometry into quantitative signals:
+将 K 线几何转化为量化信号：
 
-- ratios: (close−open)/(high−low), (high−close)/(close−low), etc.;
-- shadow asymmetry or balance indicators;
-- body-to-range normalization and persistence over recent days;
-- rolling geometry stability or asymmetry;
-- short-run shape momentum: recent trend in candle proportions.
+- 比率：(close−open)/(high−low)、(high−close)/(close−low) 等；
+- 影线不对称或平衡指标；
+- 实体对区间归一化及近几日内的持续性；
+- 滚动几何稳定性或不对称性；
+- 短期形状动量：K 线比例的最新趋势。
 
-Encourage creativity and interpretability: derive smooth, bounded, differentiable functions using existing factors."""
+鼓励创造性和可解释性：使用现有因子推导平滑、有界、可微的函数。"""
 
-_INTRO_COMPOSITE = """You are an expert in **composite factor construction and information fusion** using existing features.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
-
-{columns_desc}
-
-Please generate **{num_per_request} new and original composite alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
-
-Focus on blending multiple independent signals into coherent composites — emphasize synergy, de-noising, and orthogonalization.
-Avoid simple linear averages or sums."""
-
-_GUIDANCE_COMPOSITE = """### Factor Design Guidance: Composite Alpha Construction
-
-Fuse signals through structured, interpretable transformations:
-
-- weighted or volatility-adjusted averages of trend, volume, and range features;
-- orthogonal combination: remove redundancy, amplify orthogonal content;
-- regime-weighted composites: dynamic weights based on volatility or liquidity states;
-- robust normalization before fusion (z-score or rank-scaling);
-- include non-linear combination terms (e.g., product, ratio) but keep compact.
-
-Strive for elegant, minimal composite forms with complementary subcomponents and clear economic intuition."""
-
-_INTRO_CREATIVE = """You are a **creative transformation designer** specialized in constructing non-linear and reparametrized alpha features from existing factors.
-Below is the schema of the input DataFrame and a list of {columns_num} existing **daily-level factors**:
+_INTRO_COMPOSITE = """你是使用现有特征、精通 **合成因子构建与信息融合** 的专家。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
 
 {columns_desc}
 
-Please generate **{num_per_request} new and original creative-transform alpha factor functions** to forecast **{forecast_horizon}-day forward returns**.
+请生成 **{num_per_request} 个新颖且原创的、合成类 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
 
-Your goal is to transform, warp, or reshape existing information into new, expressive signals. Avoid simply recombining old formulas; reimagine the latent relationships within OHLCV data."""
+专注于将多个独立信号融合为连贯的合成体 — 强调协同、去噪和正交化。
+避免简单的线性平均或求和。"""
 
-_GUIDANCE_CREATIVE = """### Factor Design Guidance: Creative Transformations
+_GUIDANCE_COMPOSITE = """### 因子设计指南： Composite Alpha Construction
 
-Explore unconventional yet interpretable mappings:
+通过结构化、可解释的变换融合信号：
 
-- apply smooth bounded transforms: tanh, sigmoid, softsign, softplus;
-- non-linear mixing of volatility and momentum components;
-- conditionally reweighted factors: multiply by stability or trend state;
-- piecewise or gated transforms: amplify signal under certain regimes;
-- creative normalization: divide by historical MAD or volatility proxies.
+- 趋势、成交量和区间特征的加权或波动率调整均值；
+- 正交组合：去除冗余，放大正交内容；
+- 制度加权合成：基于波动率或流动性状态的动态权重；
+- 融合前的稳健归一化（z-score 或排名缩放）；
+- 包含非线性组合项（如乘积、比率），但保持紧凑。
 
-Design compact, differentiable expressions that yield novel response surfaces — original yet interpretable and numerically stable."""
+力求优雅、极简的合成形式，具备互补的子成分和清晰的经济直觉。"""
+
+_INTRO_CREATIVE = """你是 **创意变换设计师**，专门从现有因子构建非线性、重参数化的 alpha 特征。
+以下是输入 DataFrame 的结构以及 {columns_num} 个现有 **日频因子** 的列表：
+
+{columns_desc}
+
+请生成 **{num_per_request} 个新颖且原创的、创意变换类 alpha 因子函数**，以预测 **{forecast_horizon} 日前向收益**。
+
+你的目标是变换、扭曲或重塑现有信息，形成新的、富有表现力的信号。避免简单重组旧公式；重新构想 OHLCV 数据内部的潜在关系。"""
+
+_GUIDANCE_CREATIVE = """### 因子设计指南： Creative Transformations
+
+探索非常规但可解释的映射：
+
+- 应用平滑有界变换：tanh、sigmoid、softsign、softplus；
+- 波动率与动量成分的非线性混合；
+- 条件性重加权因子：乘以稳定性或趋势状态；
+- 分段或门控变换：在特定制度下放大信号；
+- 创造性归一化：除以历史 MAD 或波动率代理。
+
+设计能产生新颖响应面的紧凑、可微表达式 — 原创、可解释且数值稳定。"""
 _AGENTS: Dict[str, Tuple[str, str, str]] = {
     # ----- Level I - Market Structure and Cycle -----
     'agent_market_cycle': (_LEVEL_I, _INTRO_MARKET_CYCLE, _GUIDANCE_MARKET_CYCLE),
@@ -753,272 +753,272 @@ _AGENTS: Dict[str, Tuple[str, str, str]] = {
 # Multi-agent quality checker (full user prompts)
 # --------------------------------------------------------------------------- #
 
-_QUALITY_CODE_AGENT = """You are a code reviewer for quantitative alpha factors. Your task is to review the given Python code (representing a factor function) for the following issues:
+_QUALITY_CODE_AGENT = """你是量化 alpha 因子的代码审查员。你的任务是审查给定的 Python 代码（代表一个因子函数）是否存在以下问题：
 
-1. **Syntax errors** (Python syntax and runtime issues).
-2. **Pandas-specific issues**, including:
-- Chained indexing or `SettingWithCopyWarning`
-- Missing `.copy()` when modifying the DataFrame
-- Use of undefined intermediate variables
-- Incorrect or ambiguous indexing
-3. **Output format and naming**:
-- The returned Series **must be named exactly the same as the function name**
-- All intermediate columns must be defined before they are used
-- Code must be **numerically stable** (avoid inf, NaN propagation where possible)
-- When filtering or assigning values in a DataFrame, always use `df_copy.loc[row_indexer, col_indexer] = value`.
-4. **Loop structure constraints**:
-   - **Strict Rule: Nested loops are absolutely forbidden.**
-     - You must **never** write any form of loop inside another loop.
-     - Forbidden patterns include (but are not limited to):
-       - `for` inside `for`
-       - `while` inside `while`
-       - `for` inside `while`
-       - `while` inside `for`
-     - Any nested iteration structure (at any depth) is **prohibited**.
-     - The use of `while True` or any potentially infinite loop is **strictly prohibited**.
-   - If such patterns are present, mark the review as **FAIL**, explain the issue clearly, and suggest vectorized alternatives (NumPy/Pandas operations, `groupby`/`transform`/`rolling`, bounded `apply`, or single-level iteration aided by `itertools.product` without introducing nesting).
+1. **语法错误**（Python 语法和运行时问题）。
+2. **Pandas 特有问题**，包括：
+- 链式索引或 `SettingWithCopyWarning`
+- 修改 DataFrame 时缺少 `.copy()`
+- 使用未定义的中间变量
+- 错误或歧义的索引
+3. **输出格式和命名**：
+- 返回的 Series **必须** 与函数名完全一致
+- 所有中间列必须在使用前定义
+- 代码必须 **数值稳定**（尽可能避免 inf、NaN 传播）
+- 当在 DataFrame 中过滤或赋值时，始终使用 `df_copy.loc[row_indexer, col_indexer] = value`。
+4. **循环结构约束**：
+   - **严格规则：绝对禁止嵌套循环。**
+     - 你 **绝不能** 在一个循环内部编写任何形式的循环。
+     - 禁止的模式包括（但不限于）：
+       - `for` 套 `for`
+       - `while` 套 `while`
+       - `for` 套 `while`
+       - `while` 套 `for`
+     - 任何嵌套迭代结构（无论深度）**均被禁止**。
+     - 使用 `while True` 或任何可能无限循环的结构 **严格禁止**。
+   - 若存在此类模式，标记审查为 **FAIL**，清晰解释问题，并建议向量化替代方案（NumPy/Pandas 操作、`groupby`/`transform`/`rolling`、有界 `apply`、或借助 `itertools.product` 的单层迭代，不引入嵌套）。
 
 ```
 {code}
 ```
 
-### Hard Complexity Constraints (must-follow)
-Remember: **Simple factors are often the most powerful and stable.**
-- Single theme, minimal path: each factor must represent one clear idea.
-- Hard cap: never exceed 5 logical steps in total, and if >3 steps are used, the docstring must justify each extra step's necessity.
-- No redundancy / nesting: forbid stacked or decorative transforms (e.g., `zscore(zscore(x))`, `rank(rank(x))`, deep EMA chains without rationale).
-- No theme mixing: do not combine unrelated ideas.
-- Avoid nested or layered operations.
-- Avoid unnecessary complexity or logic stacking.
+### 硬性复杂度约束（必须遵守）
+记住：**简单的因子往往最强大且最稳定。**
+- 单一主题，最短路径：每个因子必须代表一个清晰的想法。
+- 硬性上限：总逻辑步骤不得超过 5 步，若超过 3 步，docstring 必须论证每个额外步骤的必要性。
+- 无冗余/嵌套：禁止堆叠或装饰性变换（如 `zscore(zscore(x))`、`rank(rank(x))`、无理由的深度 EMA 链）。
+- 不混合主题：不要组合无关的想法。
+- 避免嵌套或分层操作。
+- 避免不必要的复杂性或逻辑堆叠。
 
-### Code format specification:
+### 代码格式规范：
 
-- The input `DataFrame` has a MultiIndex of (date, ticker), and has already been grouped by ticker:
-    - Each input `DataFrame` is a time series of a single stock.
+- 输入 `DataFrame` 具有 (date, ticker) 的 MultiIndex，且已按 ticker 分组：
+    - 每个输入的 `DataFrame` 是单只股票的时间序列。
 
-- Output: A `pd.Series` indexed by `(date, ticker)` with the **same name** as the function.
+- 输出：一个以 `(date, ticker)` 为索引的 `pd.Series`，其 **名称** 与函数名相同。
 
-- Before generating the code, provide detailed instructions on how to fix the issues raised.
-- Do NOT use markdown (like ```python)
-- Do NOT add explanation or comments outside the function
-- Each function must be wrapped inside: `[function-N]` ... `[/function-N]`
-- All generated code must be executable and numerically stable.
-- Always define intermediate columns (e.g. df_copy['x']) before referencing them later.
-- The returned Series must match the function name exactly.
+- 生成代码前，请提供如何修复所提问题的详细说明。
+- 请勿使用 markdown（如 ```python）
+- 不要在函数外添加解释或注释
+- 每个函数必须包裹在：`[function-N]` ... `[/function-N]` 中
+- 所有生成的代码必须可执行且数值稳定。
+- 始终在随后引用前定义中间列（如 df_copy['x']）。
+- 返回的 Series 必须与函数名完全一致。
 
-### Factor Design Guidance
-- Focus on capturing the essential intuition of the assigned theme.
-- Ensure the logic is interpretable, robust, and implementable in a few steps.
-- Prefer clean, generalizable formulas over highly engineered constructs.
-- Each factor should be expressible in a short formula or ≤ 5 logical steps.
-- Balance simplicity with predictive potential: avoid trivial duplication, but also avoid unnecessary complexity.
-- **Strict Rule: Nested loops are absolutely forbidden.**
-    - You must **never** write any form of loop inside another loop.
-    - Forbidden patterns include but are not limited to:
-        - `for` inside `for`
-        - `while` inside `while`
-        - `for` inside `while`
-        - `while` inside `for`
-    - Any nested iteration structure is **prohibited**, regardless of indentation depth.
-    - The use of `while True` or any potentially infinite loop is **strictly prohibited**.
+### 因子设计指南
+- 专注于捕捉指定主题的核心直觉。
+- 确保逻辑可解释、稳健、且可在几步内实现。
+- 优先选择整洁、可泛化的公式，而非过度设计的构造。
+- 每个因子应能用简短公式或 ≤ 5 个逻辑步骤表达。
+- 平衡简洁性与预测潜力：避免平庸重复，也避免不必要的复杂性。
+- **严格规则：绝对禁止嵌套循环。**
+    - 你 **绝不能** 在一个循环内部编写任何形式的循环。
+    - 禁止的模式包括但不限于：
+        - `for` 套 `for`
+        - `while` 套 `while`
+        - `for` 套 `while`
+        - `while` 套 `for`
+    - 任何嵌套迭代结构 **均被禁止**，无论缩进深度如何。
+    - 使用 `while True` 或任何可能无限循环的结构 **严格禁止**。
 
-### Output format specification:
+### 输出格式规范：
 
-- Candidates should strictly comply with the Hard Complexity Constraints.
-- Each function should follow this format:
+- 候选因子必须严格遵守硬性复杂度约束。
+- 每个函数应遵循以下格式：
 [function-N]
 def factor_xyz(df):
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
-    # factor computation
+    # 因子计算
     return df_copy['factor_xyz']
 [/function-N]
 
-### Please format your response strictly as:
+### 请严格按以下格式回复：
 
-- You **must** begin your output with exactly one of the following two lines (no extra text before or after):
+- 你 **必须** 以以下两行之一 **恰好** 开头（之前/之后无额外文本）：
     - `The code is correct.`
     - `The code needs some adjustments.`
 
-- If the code is correct, stop after that line.
+- 若代码正确，在该行后停止。
 
-- If the code needs adjustments:
-1. List each issue found (use bullet points).
-2. Output the corrected function using the exact format below:
+- 若代码需调整：
+1. 列出每个发现的问题（使用要点）。
+2. 按以下精确格式输出修正后的函数：
 
     [function-N]
     def factor_xyz(df):
         \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
         df_copy = df.copy()
-        # factor computation
+        # 因子计算
         return df_copy['factor_xyz']
     [/function-N]"""
 
-_QUALITY_REPAIR_AGENT = """You are an expert interaction factor engineer. Below is the schema of the input DataFrame and a list of {columns_num} existing factors:
+_QUALITY_REPAIR_AGENT = """你是专家级交互因子工程师。以下是输入 DataFrame 的结构以及 {columns_num} 个现有因子的列表：
 
 {columns_desc}
 
-You may only use these columns for calculations. **Do NOT use any other columns** not listed here.
-The following Python function failed to execute. Your task is to correct the function so that it becomes executable and numerically stable.
+你只能使用这些列进行计算。**不要使用** 此处未列出的任何其他列。
+以下 Python 函数执行失败。你的任务是修正该函数，使其可执行且数值稳定。
 
-### Hard Complexity Constraints (must-follow)
-Remember: **Simple factors are often the most powerful and stable.**
-- Single theme, minimal path: each factor must represent one clear idea.
-- Hard cap: never exceed 5 logical steps in total, and if >3 steps are used, the docstring must justify each extra step's necessity.
-- No redundancy / nesting: forbid stacked or decorative transforms (e.g., `zscore(zscore(x))`, `rank(rank(x))`, deep EMA chains without rationale).
-- No theme mixing: do not combine unrelated ideas.
-- Avoid nested or layered operations.
-- Avoid unnecessary complexity or logic stacking.
+### 硬性复杂度约束（必须遵守）
+记住：**简单的因子往往最强大且最稳定。**
+- 单一主题，最短路径：每个因子必须代表一个清晰的想法。
+- 硬性上限：总逻辑步骤不得超过 5 步，若超过 3 步，docstring 必须论证每个额外步骤的必要性。
+- 无冗余/嵌套：禁止堆叠或装饰性变换（如 `zscore(zscore(x))`、`rank(rank(x))`、无理由的深度 EMA 链）。
+- 不混合主题：不要组合无关的想法。
+- 避免嵌套或分层操作。
+- 避免不必要的复杂性或逻辑堆叠。
 
 ---
 
-### Original function:
+### 原始函数：
 ```
 {old_code}
 ```
 
 ---
 
-### Error message when running:
+### 运行时的错误信息：
 {error}
 
 ---
 
-### Requirements:
+### 要求：
 
-- The input `DataFrame` has a MultiIndex of (date, ticker), and has already been grouped by ticker:
-    - Each input `DataFrame` is a time series of a single stock.
+- 输入 `DataFrame` 具有 (date, ticker) 的 MultiIndex，且已按 ticker 分组：
+    - 每个输入的 `DataFrame` 是单只股票的时间序列。
 
-- Output: A `pd.Series` indexed by `(date, ticker)` with the **same name** as the function.
+- 输出：一个以 `(date, ticker)` 为索引的 `pd.Series`，其 **名称** 与函数名相同。
 
-- Each function must:
-    - Have a descriptive, unique name: `factor_<logic>_<transformation(s)>_<window(s)>_<field>`.
-    - Include a clear docstring explaining the logic and formula.
-    - Balance predictive power with economic/financial interpretability.
-    - The output column name must match the function name.
-    - Be concise, precise, and readable.
-    - Build new alpha factors based on existing ones.
+- 每个函数必须：
+    - 拥有描述性、唯一的名称：`factor_<logic>_<transformation(s)>_<window(s)>_<field>`。
+    - 包含清晰的 docstring，解释逻辑和公式。
+    - 平衡预测能力与经济/金融可解释性。
+    - 输出列名必须与函数名匹配。
+    - 简洁、精确且可读。
+    - 基于现有因子构建新的 alpha 因子。
 
-### Factor Design Guidance
-- Focus on capturing the essential intuition of the assigned theme.
-- Ensure the logic is interpretable, robust, and implementable in a few steps.
-- Prefer clean, generalizable formulas over highly engineered constructs.
-- Each factor should be expressible in a short formula or ≤ 5 logical steps.
-- Balance simplicity with predictive potential: avoid trivial duplication, but also avoid unnecessary complexity.
-
----
-
-### Revision instructions:
-- Carefully read the error message.
-- Provide detailed instructions on how to fix the issues raised.
-- Revise the function accordingly to address the issues pointed out.
-- If the error message indicates that a column is missing, not present in the DataFrame, or only shows the column name,     it means the column is not among the provided factors and should not be used.         You should either use alternative columns or create a new function with similar logic.
-- You may create a new function if you believe the given function is too flawed to fix.
-- Ensure the revised function is economically meaningful, logically sound, and well-structured.
-- You may introduce new logic, transformations, or corrections as needed.
-- Make sure the output is a `pandas.Series` indexed by (date, ticker).
+### 因子设计指南
+- 专注于捕捉指定主题的核心直觉。
+- 确保逻辑可解释、稳健、且可在几步内实现。
+- 优先选择整洁、可泛化的公式，而非过度设计的构造。
+- 每个因子应能用简短公式或 ≤ 5 个逻辑步骤表达。
+- 平衡简洁性与预测潜力：避免平庸重复，也避免不必要的复杂性。
 
 ---
 
-### Pre-imported libraries you can use (current versions):
-
-- `"np"`: import numpy as np  (numpy version: 2.2.6)
-- `"pd"`: import pandas as pd  (pandas version: 2.2.3)
-- `"stats"`: from scipy import stats  (scipy version: 1.15.3)
-- `"talib"`: import talib  (talib version: 0.5.1)
-- `"math"`: import math  (built-in module)
-
-Coding Guidelines:
-- Ensure the code is robust, efficient, and optimized:
-    - Handle edge cases and exceptions (e.g., NaN values).
-    - Minimize unnecessary computations and prefer vectorized operations (e.g., pandas, numpy).
-    - Ensure numerical stability.
-    - **Strict Rule: Nested loops are absolutely forbidden.**
-        - You must **never** write any form of loop inside another loop.
-        - Forbidden patterns include but are not limited to:
-            - `for` inside `for`
-            - `while` inside `while`
-            - `for` inside `while`
-            - `while` inside `for`
-        - Any nested iteration structure is **prohibited**, regardless of indentation depth.
-        - The use of `while True` or any potentially infinite loop is **strictly prohibited**.
-- When filtering or assigning values in a DataFrame, always use `df_copy.loc[row_indexer, col_indexer] = value`.
-
-- Code should be clean, maintainable, and efficient for large datasets:
-    - Use descriptive variable names and minimize memory usage.
-    - Avoid creating unnecessary copies of large dataframes.
+### 修订说明：
+- 仔细阅读错误信息。
+- 提供如何修复所提问题的详细说明。
+- 相应修订函数，以解决指出的问题。
+- 若错误信息表明某列缺失、不在 DataFrame 中，或只显示列名，则说明该列不在提供的因子中，不应使用。你应使用替代列，或创建逻辑相似的新函数。
+- 若你认为给定函数缺陷过多而无法修复，可创建新函数。
+- 确保修订后的函数经济上有意义、逻辑上合理、结构良好。
+- 你可以按需引入新的逻辑、变换或修正。
+- 确保输出是以 (date, ticker) 为索引的 `pandas.Series`。
 
 ---
 
-### Output format specification:
+### 可用的预导入库（当前版本）：
 
-- Candidates should strictly comply with the Hard Complexity Constraints.
-- Before generating the code, provide detailed instructions on how to fix the issues raised.
-- Do NOT use markdown (like ```python)
-- Do NOT add explanation or comments outside the function
-- Each function must be wrapped inside: `[function-N]` ... `[/function-N]`
-- All generated code must be executable and numerically stable.
-- Always define intermediate columns (e.g. df_copy['x']) before referencing them later.
-- The returned Series **must be named exactly the same as the function name**.
-- Each function should follow this format:
+- `"np"`: import numpy as np  (numpy 版本：2.2.6)
+- `"pd"`: import pandas as pd  (pandas 版本：2.2.3)
+- `"stats"`: from scipy import stats  (scipy 版本：1.15.3)
+- `"talib"`: import talib  (talib 版本：0.5.1)
+- `"math"`: import math  (内置模块)
+
+编码规范：
+- 确保代码健壮、高效且经过优化：
+    - 处理边界情况和异常（如 NaN 值）。
+    - 最小化不必要的计算，优先使用向量化操作（如 pandas、numpy）。
+    - 确保数值稳定性。
+    - **严格规则：绝对禁止嵌套循环。**
+        - 你 **绝不能** 在一个循环内部编写任何形式的循环。
+        - 禁止的模式包括但不限于：
+            - `for` 套 `for`
+            - `while` 套 `while`
+            - `for` 套 `while`
+            - `while` 套 `for`
+        - 任何嵌套迭代结构都是 **被禁止的**，无论缩进深度如何。
+        - 使用 `while True` 或任何可能无限循环的结构 **严格禁止**。
+- 当在 DataFrame 中过滤或赋值时，始终使用 `df_copy.loc[row_indexer, col_indexer] = value`。
+
+- 代码应当整洁、可维护、且对大数据集高效：
+    - 使用描述性变量名并最小化内存占用。
+    - 避免创建大型数据框的不必要副本。
+
+---
+
+### 输出格式规范：
+
+- 候选因子必须严格遵守硬性复杂度约束。
+- 生成代码前，请提供如何修复所提问题的详细说明。
+- 请勿使用 markdown（如 ```python）
+- 不要在函数外添加解释或注释
+- 每个函数必须包裹在：`[function-N]` ... `[/function-N]` 中
+- 所有生成的代码必须可执行且数值稳定。
+- 始终在随后引用前定义中间列（如 df_copy['x']）。
+- 返回的 Series **必须** 与函数名完全相同。
+- 每个函数应遵循以下格式：
 
 [function-N]
 def factor_xyz(df):
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
-    # factor computation
+    # 因子计算
     return df_copy['factor_xyz']
 [/function-N]"""
 
-_QUALITY_JUDGE_AGENT = """You are an expert quantitative researcher and alpha factor reviewer for a professional factor research team.
+_QUALITY_JUDGE_AGENT = """你是专业因子研究团队的量化研究员和 alpha 因子评审员。
 
-You are asked to evaluate the following **newly generated alpha factor function** for potential inclusion into a research factor library.
+请你评估以下 **新生成的 alpha 因子函数**，判断是否可能纳入研究因子库。
 
-Your job is not to assess performance metrics, but to determine whether the factor is logically, technically, and economically sound enough to be worth further testing.
-Your evaluation should focus on **Practical Soundness**, with a professional mindset:
+你的任务不是评估性能指标，而是判断该因子在逻辑、技术和经济上是否足够健全，值得进一步测试。
+你的评估应聚焦于 **实用性健全性**，并秉持专业心态：
 
-1. Does the factor have any **future information leakage**?
-2. Is the factor calculation **correct and internally consistent**?
-3. Is the factor logic **economically interpretable** (even if exploratory or novel)?
-4. Does the factor avoid obvious **errors** (such as invalid operations, unprotected division by zero, undefined results)?
-5. Is the factor **efficiently implemented** (avoids unnecessary loops, leverages vectorized operations, and is suitable for large-scale backtesting)?
-6. Does the factor strictly **avoid any nested loops or potentially infinite loops**?
-   - Nested loops are **forbidden** at any depth:
-     - `for` inside `for`
-     - `while` inside `while`
-     - `for` inside `while`
-     - `while` inside `for`
-   - The use of `while True` or any loop that can run indefinitely is **prohibited**.
+1. 该因子是否存在 **未来信息泄漏**？
+2. 该因子的计算是否 **正确且内部一致**？
+3. 该因子逻辑是否 **经济可解释**（即使是探索性或新颖的）？
+4. 该因子是否避免了明显的 **错误**（如无效操作、未保护的除零、未定义结果）？
+5. 该因子是否 **高效实现**（避免不必要的循环、利用向量化操作、适合大规模回测）？
+6. 该因子是否严格 **避免任何嵌套循环或潜在无限循环**？
+   - 嵌套循环在任何深度下 **均被禁止**：
+     - `for` 套 `for`
+     - `while` 套 `while`
+     - `for` 套 `while`
+     - `while` 套 `for`
+   - 使用 `while True` 或任何可无限运行的循环 **均被禁止**。
 
 ---
 
-### Factor under review:
+### 待评审因子：
 
 ```
 {new_factor_code}
 ```
 
-The input DataFrame has a MultiIndex of (date, ticker), grouped by ticker (i.e., a time series per stock).
-Each input DataFrame is a time series of a single stock.
-The function outputs a pd.Series indexed by (date, ticker), with the same name as the function.
-**IMPORTANT**: The input DataFrame is sorted **in chronological order**, from the earliest date at the top to the most recent date at the bottom. This is critical for evaluating time series-based factors and avoiding information leakage.
+输入 DataFrame 具有 (date, ticker) 的 MultiIndex，按 ticker 分组（即每只股票一个时间序列）。
+每个输入 DataFrame 是单只股票的时间序列。
+该函数输出一个以 (date, ticker) 为索引的 pd.Series，其名称与函数名相同。
+**重要**：输入 DataFrame 按 **时间顺序** 排序，从最早日期（顶部）到最近日期（底部）。这对评估基于时间序列的因子、避免信息泄漏至关重要。
 
 ---
 
-### Evaluation Guidelines:
+### 评估准则：
 
-- You MUST REJECT factors with any form of **future information leakage** — this is a critical error.
-- You should reject factors that have **logical errors**, **data issues**, or **implementation mistakes**.
-- Pay special attention to operations like rolling means, groupby transforms, shifting, or reversing time series: ensure these only use past and present data relative to each row, never future data.
-- Be mindful of efficiency: avoid factors that are unnecessarily slow (e.g., unnecessary loops, non-vectorized operations) — the factor should be suitable for large-scale backtesting on millions of records.
-- Be **open-minded**: even unconventional factor ideas may be worth exploring.
-- Provide clear, specific and actionable feedback if improvements can be made.
-- Any `for` or `while` loop inside another `for` or `while` loop is **strictly prohibited**, as it indicates poor scalability and inefficiency for large cross-sectional datasets.
-- Never use constructs like `while True` or any loop that lacks a clear and finite termination condition.
+- 你必须 **拒绝** 任何存在 **未来信息泄漏** 的因子 — 这是严重错误。
+- 你应拒绝存在 **逻辑错误**、**数据问题** 或 **实现错误** 的因子。
+- 特别注意滚动均值、groupby 变换、移位或反转时间序列等操作：确保它们只使用相对每行的过去和现在数据，绝不使用未来数据。
+- 注意效率：避免不必要的慢因子（如不必要的循环、非向量化操作）— 该因子应适合对数百万条记录进行大规模回测。
+- 保持 **开放心态**：即使是非常规的因子想法也可能值得探索。
+- 若可改进，请提供清晰、具体且可操作的反馈。
+- 任何 `for` 或 `while` 循环嵌套在另一个 `for` 或 `while` 循环内 **严格禁止**，因为这表明对大型横截面数据集的可扩展性和效率较差。
+- 绝不使用 `while True` 或任何缺少清晰且有限终止条件的循环结构。
 
 ---
 
-### Please format your response strictly as JSON formaet surrounded with three backticks (```).
+### 请严格以三反引号 (```) 包裹的 JSON 格式回复。
 
 ```
 {
@@ -1028,130 +1028,130 @@ The function outputs a pd.Series indexed by (date, ticker), with the same name a
 }
 ```
 
-Practical Soundness: [Concise analysis — what is good, what needs improvement, if any.]
+实用性健全性：[简洁分析 — 哪些好，哪些需要改进（如有）。]
 
-Final Recommendation: Accept / Reject
+最终建议：接受 / 拒绝
 
-Feedback for Improvement: [Precise suggestions for how the factor engineer can improve this factor — e.g. avoid lookahead, improve calculation, improve efficiency, clarify logic, etc.]"""
+改进反馈：[针对因子工程师如何改进该因子的精确建议 — 如避免前视、改进计算、提升效率、澄清逻辑等。]"""
 
-_QUALITY_LOGIC_AGENT = """You are an expert interaction factor engineer. Below is the schema of the input DataFrame and a list of {columns_num} existing factors:
+_QUALITY_LOGIC_AGENT = """你是专家级交互因子工程师。以下是输入 DataFrame 的结构以及 {columns_num} 个现有因子的列表：
 
 {columns_desc}
 
-You may only use these columns for calculations. **Do NOT use any other columns** not listed here.
-The following Python function was reviewed and **did NOT pass the logical soundness evaluation**. Your task is to revise and improve this function so that:
+你只能使用这些列进行计算。**不要使用** 此处未列出的任何其他列。
+以下 Python 函数经审查 **未通过** 逻辑健全性评估。你的任务是修订并改进该函数，使其：
 
-1. It is economically and financially interpretable.
-2. It is logically sound according to financial principles.
-3. It addresses the specific feedback provided below.
+1. 在经济和金融上可解释。
+2. 符合金融原则、逻辑健全。
+3. 解决下方提供的具体反馈。
 
 ---
 
-### Original function:
+### 原始函数：
 ```
 {old_code}
 ```
 
 ---
 
-### Hard Complexity Constraints (must-follow)
-Remember: **Simple factors are often the most powerful and stable.**
-- Single theme, minimal path: each factor must represent one clear idea.
-- Hard cap: never exceed 5 logical steps in total, and if >3 steps are used, the docstring must justify each extra step's necessity.
-- No redundancy / nesting: forbid stacked or decorative transforms (e.g., `zscore(zscore(x))`, `rank(rank(x))`, deep EMA chains without rationale).
-- No theme mixing: do not combine unrelated ideas.
-- Avoid nested or layered operations.
-- Avoid unnecessary complexity or logic stacking.
+### 硬性复杂度约束（必须遵守）
+记住：**简单的因子往往最强大且最稳定。**
+- 单一主题，最短路径：每个因子必须代表一个清晰的想法。
+- 硬性上限：总逻辑步骤不得超过 5 步，若超过 3 步，docstring 必须论证每个额外步骤的必要性。
+- 无冗余/嵌套：禁止堆叠或装饰性变换（如 `zscore(zscore(x))`、`rank(rank(x))`、无理由的深度 EMA 链）。
+- 不混合主题：不要组合无关的想法。
+- 避免嵌套或分层操作。
+- 避免不必要的复杂性或逻辑堆叠。
 
 ---
 
-### JudgeAgent feedback (reason for rejection):
+### 评审代理反馈（拒绝原因）：
 {dynamic_feedback}
 
 ---
 
-### Requirements:
+### 要求：
 
-- The input `DataFrame` has a MultiIndex of (date, ticker), and has already been grouped by ticker:
-    - Each input `DataFrame` is a time series of a single stock.
+- 输入 `DataFrame` 具有 (date, ticker) 的 MultiIndex，且已按 ticker 分组：
+    - 每个输入的 `DataFrame` 是单只股票的时间序列。
 
-- Output: A `pd.Series` indexed by `(date, ticker)` with the **same name** as the function.
+- 输出：一个以 `(date, ticker)` 为索引的 `pd.Series`，其 **名称** 与函数名相同。
 
-- Each function must:
-    - Have a descriptive, unique name: `factor_<logic>_<transformation(s)>_<window(s)>_<field>`.
-    - Include a clear docstring explaining the logic and formula.
-    - Balance predictive power with economic/financial interpretability.
-    - The output column name must match the function name.
-    - Be concise, precise, and readable.
-    - Build new alpha factors based on existing ones.
+- 每个函数必须：
+    - 拥有描述性、唯一的名称：`factor_<logic>_<transformation(s)>_<window(s)>_<field>`。
+    - 包含清晰的 docstring，解释逻辑和公式。
+    - 平衡预测能力与经济/金融可解释性。
+    - 输出列名必须与函数名匹配。
+    - 简洁、精确且可读。
+    - 基于现有因子构建新的 alpha 因子。
 
-### Factor Design Guidance
-- Focus on capturing the essential intuition of the assigned theme.
-- Ensure the logic is interpretable, robust, and implementable in a few steps.
-- Prefer clean, generalizable formulas over highly engineered constructs.
-- Each factor should be expressible in a short formula or ≤ 5 logical steps.
-- Balance simplicity with predictive potential: avoid trivial duplication, but also avoid unnecessary complexity.
-
----
-
-### Revision instructions:
-- Carefully read the JudgeAgent feedback.
-- Provide detailed instructions on how to fix the issues raised.
-- Revise the function accordingly to address the issues pointed out.
-- You may create a new one if you believe the given function is too flawed to fix.
-- Ensure the revised function is economically meaningful, logically sound, and well-structured.
-- You may introduce new logic, transformations, or corrections as needed.
-- Make sure the output is a `pandas.Series` indexed by (date, ticker).
+### 因子设计指南
+- 专注于捕捉指定主题的核心直觉。
+- 确保逻辑可解释、稳健、且可在几步内实现。
+- 优先选择整洁、可泛化的公式，而非过度设计的构造。
+- 每个因子应能用简短公式或 ≤ 5 个逻辑步骤表达。
+- 平衡简洁性与预测潜力：避免平庸重复，也避免不必要的复杂性。
 
 ---
 
-### Pre-imported libraries you can use (current versions):
-
-- `"np"`: import numpy as np  (numpy version: 2.2.6)
-- `"pd"`: import pandas as pd  (pandas version: 2.2.3)
-- `"stats"`: from scipy import stats  (scipy version: 1.15.3)
-- `"talib"`: import talib  (talib version: 0.5.1)
-- `"math"`: import math  (built-in module)
-
-Coding Guidelines:
-- Ensure the code is robust, efficient, and optimized:
-    - Handle edge cases and exceptions (e.g., NaN values).
-    - Minimize unnecessary computations and prefer vectorized operations (e.g., pandas, numpy).
-    - Ensure numerical stability.
-    - **Strict Rule: Nested loops are absolutely forbidden.**
-        - You must **never** write any form of loop inside another loop.
-        - Forbidden patterns include but are not limited to:
-            - `for` inside `for`
-            - `while` inside `while`
-            - `for` inside `while`
-            - `while` inside `for`
-        - Any nested iteration structure is **prohibited**, regardless of indentation depth.
-        - The use of `while True` or any potentially infinite loop is **strictly prohibited**.
-- When filtering or assigning values in a DataFrame, always use `df_copy.loc[row_indexer, col_indexer] = value`.
-
-- Code should be clean, maintainable, and efficient for large datasets:
-    - Use descriptive variable names and minimize memory usage.
-    - Avoid creating unnecessary copies of large dataframes.
+### 修订说明：
+- 仔细阅读评审代理的反馈。
+- 提供如何修复所提问题的详细说明。
+- 相应修订函数，以解决指出的问题。
+- 若你认为给定函数缺陷过多而无法修复，可创建新函数。
+- 确保修订后的函数经济上有意义、逻辑上合理、结构良好。
+- 你可以按需引入新的逻辑、变换或修正。
+- 确保输出是以 (date, ticker) 为索引的 `pandas.Series`。
 
 ---
 
-### Output format specification:
+### 可用的预导入库（当前版本）：
 
-- Candidates should strictly comply with the Hard Complexity Constraints.
-- Before generating the code, provide detailed instructions on how to fix the issues raised.
-- Do NOT use markdown (like ```python)
-- Do NOT add explanation or comments outside the function
-- Each function must be wrapped inside: `[function-N]` ... `[/function-N]`
-- All generated code must be executable and numerically stable.
-- Always define intermediate columns (e.g. df_copy['x']) before referencing them later.
-- The returned Series **must be named exactly the same as the function name**.
-- Each function should follow this format:
+- `"np"`: import numpy as np  (numpy 版本：2.2.6)
+- `"pd"`: import pandas as pd  (pandas 版本：2.2.3)
+- `"stats"`: from scipy import stats  (scipy 版本：1.15.3)
+- `"talib"`: import talib  (talib 版本：0.5.1)
+- `"math"`: import math  (内置模块)
+
+编码规范：
+- 确保代码健壮、高效且经过优化：
+    - 处理边界情况和异常（如 NaN 值）。
+    - 最小化不必要的计算，优先使用向量化操作（如 pandas、numpy）。
+    - 确保数值稳定性。
+    - **严格规则：绝对禁止嵌套循环。**
+        - 你 **绝不能** 在一个循环内部编写任何形式的循环。
+        - 禁止的模式包括但不限于：
+            - `for` 套 `for`
+            - `while` 套 `while`
+            - `for` 套 `while`
+            - `while` 套 `for`
+        - 任何嵌套迭代结构都是 **被禁止的**，无论缩进深度如何。
+        - 使用 `while True` 或任何可能无限循环的结构 **严格禁止**。
+- 当在 DataFrame 中过滤或赋值时，始终使用 `df_copy.loc[row_indexer, col_indexer] = value`。
+
+- 代码应当整洁、可维护、且对大数据集高效：
+    - 使用描述性变量名并最小化内存占用。
+    - 避免创建大型数据框的不必要副本。
+
+---
+
+### 输出格式规范：
+
+- 候选因子必须严格遵守硬性复杂度约束。
+- 生成代码前，请提供如何修复所提问题的详细说明。
+- 请勿使用 markdown（如 ```python）
+- 不要在函数外添加解释或注释
+- 每个函数必须包裹在：`[function-N]` ... `[/function-N]` 中
+- 所有生成的代码必须可执行且数值稳定。
+- 始终在随后引用前定义中间列（如 df_copy['x']）。
+- 返回的 Series **必须** 与函数名完全相同。
+- 每个函数应遵循以下格式：
 
 [function-N]
 def factor_xyz(df):
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
-    # factor computation
+    # 因子计算
     return df_copy['factor_xyz']
 [/function-N]"""
 
@@ -1166,24 +1166,24 @@ _QUALITY: Dict[str, str] = {
 # Thinking evolution (full user prompts)
 # --------------------------------------------------------------------------- #
 
-_EVOLUTION_MUTATION = """You are an expert quantitative factor engineer specialized in **factor mutation and optimization**.
+_EVOLUTION_MUTATION = """你是专门从事 **因子变异与优化** 的专家级量化因子工程师。
 
 {intro}
 
-### Hard Complexity Constraints (must-follow)
-Remember: **Simple factors are often the most powerful and stable.**
-- Single theme, minimal path: each factor must represent one clear idea.
-- Hard cap: never exceed 5 logical steps in total, and if >3 steps are used, the docstring must justify each extra step's necessity.
-- No redundancy / nesting: forbid stacked or decorative transforms (e.g., `zscore(zscore(x))`, `rank(rank(x))`, deep EMA chains without rationale).
-- No theme mixing: do not combine unrelated ideas.
-- Nested for loops are forbidden.
-- Avoid unnecessary complexity or logic stacking.
+### 硬性复杂度约束（必须遵守）
+记住：**简单的因子往往最强大且最稳定。**
+- 单一主题，最短路径：每个因子必须代表一个清晰的想法。
+- 硬性上限：总逻辑步骤不得超过 5 步，若超过 3 步，docstring 必须论证每个额外步骤的必要性。
+- 无冗余/嵌套：禁止堆叠或装饰性变换（如 `zscore(zscore(x))`、`rank(rank(x))`、无理由的深度 EMA 链）。
+- 不混合主题：不要组合无关的想法。
+- 禁止嵌套 for 循环。
+- 避免不必要的复杂性或逻辑堆叠。
 
-Your task is to generate an improved version of the following alpha factor by applying **intelligent mutations**:
+你的任务是通过应用 **智能变异** 生成以下 alpha 因子的改进版本：
 
 ---
 
-### Original Factor:
+### 原始因子：
 
 ```
 {original_factor_code}
@@ -1191,47 +1191,47 @@ Your task is to generate an improved version of the following alpha factor by ap
 
 ---
 
-### Design objectives:
+### 设计目标：
 
-- Be creative and think deeply before taking the next step.
-- Preserve the **core intuition** and signal of the original factor.
-- Apply meaningful **mutations** to improve predictive power and robustness.
-- Possible mutations include:
-    - Non-linear transformations (log, exp, rank, winsorization)
-    - Cross-sectional normalization
-    - Time window adjustments
-    - Interaction with other features
-    - Smoothing or stability enhancements
-    - Adding interaction terms
+- 在采取下一步前保持创造性并深入思考。
+- 保留原始因子的 **核心直觉** 和信号。
+- 应用有意义的 **变异** 以提高预测能力和稳健性。
+- 可能的变异包括：
+    - 非线性变换（log、exp、rank、缩尾）
+    - 横截面归一化
+    - 时间窗口调整
+    - 与其他特征的交互
+    - 平滑或稳定性增强
+    - 添加交互项
 
-- The mutated factor should be **clearly distinct** from the original while maintaining conceptual lineage.
-- The mutated factor should still be mathematically valid and interpretable.
-
----
-
-### Requirements:
-
-- The input `DataFrame` has a MultiIndex of (date, ticker), and has already been grouped by ticker:
-    - Each input `DataFrame` is a time series of a single stock.
-
-- Output: A `pd.Series` indexed by `(date, ticker)` with the **same name** as the function.
-
-- Each function must:
-    - Have a descriptive, unique name: `factor_<logic>_<transformation(s)>_<window(s)>_<field>`.
-    - Include a clear docstring explaining the logic and formula.
-    - Balance predictive power with economic/financial interpretability.
-    - The output column name must match the function name.
-    - Be concise, precise, and readable.
-    - Build new alpha factors based on existing ones.
+- 变异后的因子应与原始因子 **明显不同**，同时保持概念上的延续性。
+- 变异后的因子仍应在数学上有效且可解释。
 
 ---
 
-### Factor Design Guidance
-- Focus on capturing the essential intuition of the assigned theme.
-- Ensure the logic is interpretable, robust, and implementable in a few steps.
-- Prefer clean, generalizable formulas over highly engineered constructs.
-- Each factor should be expressible in a short formula or ≤ 5 logical steps.
-- Balance simplicity with predictive potential: avoid trivial duplication, but also avoid unnecessary complexity.
+### 要求：
+
+- 输入 `DataFrame` 具有 (date, ticker) 的 MultiIndex，且已按 ticker 分组：
+    - 每个输入的 `DataFrame` 是单只股票的时间序列。
+
+- 输出：一个以 `(date, ticker)` 为索引的 `pd.Series`，其 **名称** 与函数名相同。
+
+- 每个函数必须：
+    - 拥有描述性、唯一的名称：`factor_<logic>_<transformation(s)>_<window(s)>_<field>`。
+    - 包含清晰的 docstring，解释逻辑和公式。
+    - 平衡预测能力与经济/金融可解释性。
+    - 输出列名必须与函数名匹配。
+    - 简洁、精确且可读。
+    - 基于现有因子构建新的 alpha 因子。
+
+---
+
+### 因子设计指南
+- 专注于捕捉指定主题的核心直觉。
+- 确保逻辑可解释、稳健、且可在几步内实现。
+- 优先选择整洁、可泛化的公式，而非过度设计的构造。
+- 每个因子应能用简短公式或 ≤ 5 个逻辑步骤表达。
+- 平衡简洁性与预测潜力：避免平庸重复，也避免不必要的复杂性。
 
 ---
 
@@ -1239,72 +1239,72 @@ Your task is to generate an improved version of the following alpha factor by ap
 
 ---
 
-### Pre-imported libraries you can use (current versions):
+### 可用的预导入库（当前版本）：
 
-- `"np"`: import numpy as np  (numpy version: 2.2.6)
-- `"pd"`: import pandas as pd  (pandas version: 2.2.3)
-- `"stats"`: from scipy import stats  (scipy version: 1.15.3)
-- `"talib"`: import talib  (talib version: 0.5.1)
-- `"math"`: import math  (built-in module)
+- `"np"`: import numpy as np  (numpy 版本：2.2.6)
+- `"pd"`: import pandas as pd  (pandas 版本：2.2.3)
+- `"stats"`: from scipy import stats  (scipy 版本：1.15.3)
+- `"talib"`: import talib  (talib 版本：0.5.1)
+- `"math"`: import math  (内置模块)
 
-Coding Guidelines:
-- Ensure the code is concise, robust, efficient, and optimized:
-    - Handle edge cases and exceptions (e.g., NaN values).
-    - Minimize unnecessary computations and prefer vectorized operations (e.g., pandas, numpy).
-    - Ensure numerical stability.
-    - **Strict Rule: Nested loops are absolutely forbidden.**
-        - You must **never** write any form of loop inside another loop.
-        - Forbidden patterns include but are not limited to:
-            - `for` inside `for`
-            - `while` inside `while`
-            - `for` inside `while`
-            - `while` inside `for`
-        - Any nested iteration structure is **prohibited**, regardless of indentation depth.
-        - The use of `while True` or any potentially infinite loop is **strictly prohibited**.
+编码规范：
+- 确保代码简洁、健壮、高效且经过优化：
+    - 处理边界情况和异常（如 NaN 值）。
+    - 最小化不必要的计算，优先使用向量化操作（如 pandas、numpy）。
+    - 确保数值稳定性。
+    - **严格规则：绝对禁止嵌套循环。**
+        - 你 **绝不能** 在一个循环内部编写任何形式的循环。
+        - 禁止的模式包括但不限于：
+            - `for` 套 `for`
+            - `while` 套 `while`
+            - `for` 套 `while`
+            - `while` 套 `for`
+        - 任何嵌套迭代结构都是 **被禁止的**，无论缩进深度如何。
+        - 使用 `while True` 或任何可能无限循环的结构 **严格禁止**。
 
-- Code should be clean, maintainable, and efficient for large datasets:
-    - Use descriptive variable names and minimize memory usage.
-    - Avoid creating unnecessary copies of large dataframes.
+- 代码应当整洁、可维护、且对大数据集高效：
+    - 使用描述性变量名并最小化内存占用。
+    - 避免创建大型数据框的不必要副本。
 
 ---
 
-### Output format specification:
+### 输出格式规范：
 
-- Candidates should strictly comply with the Hard Complexity Constraints.
-- Do NOT use markdown (like ```python)
-- Do NOT add explanation or comments outside the function
-- Each function must be wrapped inside: `[function-N]` ... `[/function-N]`
-- All generated code must be executable and numerically stable.
-- Always define intermediate columns (e.g. df_copy['x']) before referencing them later.
-- The returned Series **must be named exactly the same as the function name**
-- Each function should follow this format:
+- 候选因子必须严格遵守硬性复杂度约束。
+- 请勿使用 markdown（如 ```python）
+- 不要在函数外添加解释或注释
+- 每个函数必须包裹在：`[function-N]` ... `[/function-N]` 中
+- 所有生成的代码必须可执行且数值稳定。
+- 始终在随后引用前定义中间列（如 df_copy['x']）。
+- 返回的 Series **必须** 与函数名完全一致
+- 每个函数应遵循以下格式：
 
 [function-N]
 def factor_xyz(df):
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
-    # factor computation
+    # 因子计算
     return df_copy['factor_xyz']
 [/function-N]"""
 
-_EVOLUTION_CROSSOVER = """You are an expert quantitative factor engineer specialized in **factor evolution and crossover design**.
+_EVOLUTION_CROSSOVER = """你是专门从事 **因子进化与交叉设计** 的专家级量化因子工程师。
 
 {intro}
 
-### Hard Complexity Constraints (must-follow)
-Remember: **Simple factors are often the most powerful and stable.**
-- Single theme, minimal path: each factor must represent one clear idea.
-- Hard cap: never exceed 5 logical steps in total, and if >3 steps are used, the docstring must justify each extra step's necessity.
-- No redundancy / nesting: forbid stacked or decorative transforms (e.g., `zscore(zscore(x))`, `rank(rank(x))`, deep EMA chains without rationale).
-- No theme mixing: do not combine unrelated ideas.
-- Avoid nested or layered operations.
-- Avoid unnecessary complexity or logic stacking.
+### 硬性复杂度约束（必须遵守）
+记住：**简单的因子往往最强大且最稳定。**
+- 单一主题，最短路径：每个因子必须代表一个清晰的想法。
+- 硬性上限：总逻辑步骤不得超过 5 步，若超过 3 步，docstring 必须论证每个额外步骤的必要性。
+- 无冗余/嵌套：禁止堆叠或装饰性变换（如 `zscore(zscore(x))`、`rank(rank(x))`、无理由的深度 EMA 链）。
+- 不混合主题：不要组合无关的想法。
+- 避免嵌套或分层操作。
+- 避免不必要的复杂性或逻辑堆叠。
 
-Your task is to generate a new alpha factor by **intelligently combining the following two parent factors**:
+你的任务是通过 **智能组合以下两个父因子** 生成新的 alpha 因子：
 
 ---
 
-### Parent Factor 1:
+### 父因子 1：
 
 ```
 {parent_factor_1_code}
@@ -1312,7 +1312,7 @@ Your task is to generate a new alpha factor by **intelligently combining the fol
 
 ---
 
-### Parent Factor 2:
+### 父因子 2：
 
 ```
 {parent_factor_2_code}
@@ -1320,40 +1320,40 @@ Your task is to generate a new alpha factor by **intelligently combining the fol
 
 ---
 
-### Design objectives:
+### 设计目标：
 
-- Be creative and think deeply before taking the next step.
-- Create a new alpha factor that combines the **core insights and signals** of both parent factors.
-- Introduce meaningful **interactions** between the parent factors (non-linear, dynamic, cross-sectional, temporal).
-- The new factor should offer **potentially superior predictive power** and richer structure than either parent alone.
-- Avoid simple additive combinations — instead, design **structurally novel** interactions.
-- The new factor must remain interpretable and have clear financial intuition.
-
----
-
-### Requirements:
-
-- The input `DataFrame` has a MultiIndex of (date, ticker), and has already been grouped by ticker:
-    - Each input `DataFrame` is a time series of a single stock.
-
-- Output: A `pd.Series` indexed by `(date, ticker)` with the **same name** as the function.
-
-- Each function must:
-    - Have a descriptive, unique name: `factor_<logic>_<transformation(s)>_<window(s)>_<field>`.
-    - Include a clear docstring explaining the logic and formula.
-    - Balance predictive power with economic/financial interpretability.
-    - The output column name must match the function name.
-    - Be concise, precise, and readable.
-    - Build new alpha factors based on existing ones.
+- 在采取下一步前保持创造性并深入思考。
+- 创建结合两个父因子 **核心洞察和信号** 的新 alpha 因子。
+- 在父因子之间引入有意义的 **交互**（非线性、动态、横截面、时间）。
+- 新因子应比任一父因子单独提供 **潜在更优的预测能力** 和更丰富的结构。
+- 避免简单的加性组合 — 相反，设计 **结构新颖** 的交互。
+- 新因子必须保持可解释，并具有清晰的金融直觉。
 
 ---
 
-### Factor Design Guidance
-- Focus on capturing the essential intuition of the assigned theme.
-- Ensure the logic is interpretable, robust, and implementable in a few steps.
-- Prefer clean, generalizable formulas over highly engineered constructs.
-- Each factor should be expressible in a short formula or ≤ 5 logical steps.
-- Balance simplicity with predictive potential: avoid trivial duplication, but also avoid unnecessary complexity.
+### 要求：
+
+- 输入 `DataFrame` 具有 (date, ticker) 的 MultiIndex，且已按 ticker 分组：
+    - 每个输入的 `DataFrame` 是单只股票的时间序列。
+
+- 输出：一个以 `(date, ticker)` 为索引的 `pd.Series`，其 **名称** 与函数名相同。
+
+- 每个函数必须：
+    - 拥有描述性、唯一的名称：`factor_<logic>_<transformation(s)>_<window(s)>_<field>`。
+    - 包含清晰的 docstring，解释逻辑和公式。
+    - 平衡预测能力与经济/金融可解释性。
+    - 输出列名必须与函数名匹配。
+    - 简洁、精确且可读。
+    - 基于现有因子构建新的 alpha 因子。
+
+---
+
+### 因子设计指南
+- 专注于捕捉指定主题的核心直觉。
+- 确保逻辑可解释、稳健、且可在几步内实现。
+- 优先选择整洁、可泛化的公式，而非过度设计的构造。
+- 每个因子应能用简短公式或 ≤ 5 个逻辑步骤表达。
+- 平衡简洁性与预测潜力：避免平庸重复，也避免不必要的复杂性。
 
 ---
 
@@ -1361,51 +1361,51 @@ Your task is to generate a new alpha factor by **intelligently combining the fol
 
 ---
 
-### Pre-imported libraries you can use (current versions):
+### 可用的预导入库（当前版本）：
 
-- `"np"`: import numpy as np  (numpy version: 2.2.6)
-- `"pd"`: import pandas as pd  (pandas version: 2.2.3)
-- `"stats"`: from scipy import stats  (scipy version: 1.15.3)
-- `"talib"`: import talib  (talib version: 0.5.1)
-- `"math"`: import math  (built-in module)
+- `"np"`: import numpy as np  (numpy 版本：2.2.6)
+- `"pd"`: import pandas as pd  (pandas 版本：2.2.3)
+- `"stats"`: from scipy import stats  (scipy 版本：1.15.3)
+- `"talib"`: import talib  (talib 版本：0.5.1)
+- `"math"`: import math  (内置模块)
 
-Coding Guidelines:
-- Ensure the code is concise, robust, efficient, and optimized:
-    - Handle edge cases and exceptions (e.g., NaN values).
-    - Minimize unnecessary computations and prefer vectorized operations (e.g., pandas, numpy).
-    - Ensure numerical stability.
-    - **Strict Rule: Nested loops are absolutely forbidden.**
-        - You must **never** write any form of loop inside another loop.
-        - Forbidden patterns include but are not limited to:
-            - `for` inside `for`
-            - `while` inside `while`
-            - `for` inside `while`
-            - `while` inside `for`
-        - Any nested iteration structure is **prohibited**, regardless of indentation depth.
-        - The use of `while True` or any potentially infinite loop is **strictly prohibited**.
+编码规范：
+- 确保代码简洁、健壮、高效且经过优化：
+    - 处理边界情况和异常（如 NaN 值）。
+    - 最小化不必要的计算，优先使用向量化操作（如 pandas、numpy）。
+    - 确保数值稳定性。
+    - **严格规则：绝对禁止嵌套循环。**
+        - 你 **绝不能** 在一个循环内部编写任何形式的循环。
+        - 禁止的模式包括但不限于：
+            - `for` 套 `for`
+            - `while` 套 `while`
+            - `for` 套 `while`
+            - `while` 套 `for`
+        - 任何嵌套迭代结构都是 **被禁止的**，无论缩进深度如何。
+        - 使用 `while True` 或任何可能无限循环的结构 **严格禁止**。
 
-- Code should be clean, maintainable, and efficient for large datasets:
-    - Use descriptive variable names and minimize memory usage.
-    - Avoid creating unnecessary copies of large dataframes.
+- 代码应当整洁、可维护、且对大数据集高效：
+    - 使用描述性变量名并最小化内存占用。
+    - 避免创建大型数据框的不必要副本。
 
 ---
 
-### Output format specification:
+### 输出格式规范：
 
-- Candidates should strictly comply with the Hard Complexity Constraints.
-- Do NOT use markdown (like ```python)
-- Do NOT add explanation or comments outside the function
-- Each function must be wrapped inside: `[function-N]` ... `[/function-N]`
-- All generated code must be executable and numerically stable.
-- Always define intermediate columns (e.g. df_copy['x']) before referencing them later.
-- The returned Series **must be named exactly the same as the function name**
-- Each function should follow this format:
+- 候选因子必须严格遵守硬性复杂度约束。
+- 请勿使用 markdown（如 ```python）
+- 不要在函数外添加解释或注释
+- 每个函数必须包裹在：`[function-N]` ... `[/function-N]` 中
+- 所有生成的代码必须可执行且数值稳定。
+- 始终在随后引用前定义中间列（如 df_copy['x']）。
+- 返回的 Series **必须** 与函数名完全一致
+- 每个函数应遵循以下格式：
 
 [function-N]
 def factor_xyz(df):
     \"\"\"Explain the logic. One clear idea. Short formula. No redundant stacking.\"\"\"
     df_copy = df.copy()
-    # factor computation
+    # 因子计算
     return df_copy['factor_xyz']
 [/function-N]"""
 
