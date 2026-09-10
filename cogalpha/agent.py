@@ -55,10 +55,6 @@ class Agent:
     # ------------------------------------------------------------------ #
     # Prompt building
     # ------------------------------------------------------------------ #
-    def build_quality_prompt(self, agent_name: str, **kwargs) -> str:
-        """Fill one quality-checker template's `{...}` placeholders."""
-        return utils.render_placeholders(_QUALITY[agent_name], **kwargs)
-
     def build_evolution_prompt(self, agent_name: str, **kwargs) -> str:
         """Fill one evolution template's `{...}` placeholders."""
         return utils.render_placeholders(_EVOLUTION[agent_name], **kwargs)
@@ -168,12 +164,12 @@ class Agent:
 
     def judge(self, code: str) -> JudgeResult:
         """Judge Agent: decide Accept/Reject + improvement feedback."""
-        prompt = self.build_quality_prompt("judge_agent", new_factor_code=code)
+        prompt = utils.render_placeholders(_QUALITY["judge_agent"], new_factor_code=code)
         return self.complete_json(_SYSTEM_MESSAGE, prompt, JudgeResult)
 
     def code_quality(self, code: str) -> QualityResult:
         """Code Quality Agent: LLM review that complements static checks."""
-        prompt = self.build_quality_prompt("code_quality_agent", code=code)
+        prompt = utils.render_placeholders(_QUALITY["code_quality_agent"], code=code)
         try:
             raw = self.complete_quality(_SYSTEM_MESSAGE, prompt)
         except Exception as exc:  # pragma: no cover - API dependent
@@ -186,8 +182,8 @@ class Agent:
 
     def repair(self, old_code: str, error: str) -> str:
         """Code Repair Agent: fix an execution/static failure."""
-        prompt = self.build_quality_prompt(
-            "code_repair_agent",
+        prompt = utils.render_placeholders(
+            _QUALITY["code_repair_agent"],
             columns_num=self.columns_num,
             columns_desc=self.columns_desc,
             old_code=old_code,
@@ -199,8 +195,8 @@ class Agent:
 
     def logic_improve(self, old_code: str, feedback: str) -> str:
         """Logic Improvement Agent: improve a rejected factor."""
-        prompt = self.build_quality_prompt(
-            "logic_improvement_agent",
+        prompt = utils.render_placeholders(
+            _QUALITY["logic_improvement_agent"],
             columns_num=self.columns_num,
             columns_desc=self.columns_desc,
             old_code=old_code,
