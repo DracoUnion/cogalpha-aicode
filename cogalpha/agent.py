@@ -107,21 +107,21 @@ class Agent:
         """Call the LLM for one generation agent and parse the factor functions."""
         eff = feedback.effective if feedback else ""
         ineff = feedback.ineffective if feedback else ""
-        system, user = self.build_generation_prompt(
-            agent_id=agent_id,
+        user = utils.render_placeholders(
+            _GENERATION_TEMPLATES[agent_id],
             columns_desc=columns_desc,
             columns_num=columns_num,
             num_per_request=num_per_request,
             forecast_horizon=forecast_horizon,
-            effective_CoT=eff,
-            ineffective_CoT=ineff,
+            effective_block=utils.render_cot_block(_EFFECTIVE_ANALYSIS, eff),
+            ineffective_block=utils.render_cot_block(_INEFFECTIVE_ANALYSIS, ineff),
         )
         try:
-            raw = self.complete(system, user, temperature=temperature, model=self.cfg.llm.model)
+            raw = self.complete(_SYSTEM_MESSAGE, user, temperature=temperature, model=self.cfg.llm.model)
         except Exception as exc:  # pragma: no cover - API dependent
             logger.error("generation call for %s failed: %s", agent_id, exc)
             return []
-        return self.parse_generated_code(raw)
+        return utils.parse_generated_code(raw)
 
     def _intro(
         self,
@@ -158,7 +158,7 @@ class Agent:
         except Exception as exc:  # pragma: no cover
             logger.error("mutation call failed: %s", exc)
             return []
-        return self.parse_generated_code(raw)
+        return utils.parse_generated_code(raw)
 
     def crossover(
         self,
@@ -183,7 +183,7 @@ class Agent:
         except Exception as exc:  # pragma: no cover
             logger.error("crossover call failed: %s", exc)
             return []
-        return self.parse_generated_code(raw)
+        return utils.parse_generated_code(raw)
 
     # ------------------------------------------------------------------ #
     # Quality checker (static + LLM agents)
@@ -222,7 +222,7 @@ class Agent:
             error=error,
         )
         raw = self.complete_quality(_SYSTEM_MESSAGE, prompt)
-        funcs = self.parse_generated_code(raw)
+        funcs = utils.parse_generated_code(raw)
         return funcs[0].code if funcs else old_code
 
     def logic_improve(self, old_code: str, feedback: str) -> str:
@@ -235,7 +235,7 @@ class Agent:
             dynamic_feedback=feedback,
         )
         raw = self.complete_quality(_SYSTEM_MESSAGE, prompt)
-        funcs = self.parse_generated_code(raw)
+        funcs = utils.parse_generated_code(raw)
         return funcs[0].code if funcs else old_code
 
     def check_code(self, code: str, name: str) -> str:
@@ -310,10 +310,6 @@ class Agent:
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
-    @staticmethod
-    def parse_generated_code(raw: str) -> List[ParsedFunction]:
-        """Extract `[function-N]` blocks from a generation response."""
-        return utils.parse_generated_code(raw)
 
     def describe_columns(self, df) -> str:
         """Turn the panel's column names into a `columns_desc` block.
