@@ -242,7 +242,7 @@ class CogAlpha:
         agent_ids = self.agent.list_agents()
         while True:
             agent_id = random.choice(agent_ids)
-            self._step(f"1.{idx+1}.1", f"生成代码 {agent_id}")
+            self._step(f"1.{idx+1}.1", f"生成代码，Agent：{agent_id}")
             level, _, _ = _AGENTS[agent_id]
             pfs = self.agent.generate_code(
                 agent_id, columns_desc, columns_num,
@@ -250,9 +250,9 @@ class CogAlpha:
                 self.cfg.forecast_horizon, None,
             )
             pf_names = ', '.join(pf.name for pf in pfs)
-            self._step(f"1.{idx+1}.1", f"生成代码完毕 {pf_names}")
+            self._step(f"1.{idx+1}.1", f"生成代码完毕，名称：{pf_names}")
             for pf in pfs:
-                self._step(f"1.{idx+1}.2", f"生成因子 {pf.name}")
+                self._step(f"1.{idx+1}.2", f"生成因子，名称：{pf.name}")
                 f = self.produce_factor(
                     pf, df, label,
                     theme=agent_id, level=level, agent_id=agent_id,
@@ -261,9 +261,9 @@ class CogAlpha:
                 )
                 if f is not None and f.executable:
                     pool.append(f)
-                    self._step(f"1.{idx+1}.2", f"生成因子完毕 {f.name}")
+                    self._step(f"1.{idx+1}.2", f"生成因子完毕，名称：{f.name}")
                 else:
-                    self._step(f"1.{idx+1}.2", f"生成因子失败 {pf.name}")
+                    self._step(f"1.{idx+1}.2", f"生成因子失败，名称：{pf.name}")
             if pool: break
 
         return pool
@@ -273,7 +273,6 @@ class CogAlpha:
         columns_desc, columns_num,
         df, label, result,
     ):
-        self._step("1", "构建初始父池（目标 %d 个因子）", self.cfg.generation.initial_pool_size)
         parent_pool_fname = path.join(self.proj_dir, 'parent_pool.yaml')
         if path.isfile(parent_pool_fname) and \
            path.getsize(parent_pool_fname):
@@ -282,6 +281,12 @@ class CogAlpha:
         else:
             parent_pool: List[Factor] = []
             utils.write_yaml(parent_pool_fname, parent_pool)
+
+        self._step(
+            "1", "构建初始父池（目标 %d 个因子，已有 %d 个）", 
+            self.cfg.generation.initial_pool_size,
+            len(parent_pool),
+        )
 
         trpool = ThreadPoolExecutor(self.cfg.threads)
         hdls: List[Future] = []
@@ -316,27 +321,27 @@ class CogAlpha:
     # Main
     # ------------------------------------------------------------------ #
     def run(self) -> SearchResult:
-        self._step("0", "初始化随机种子（seed=%d）", self.cfg.generation.random_state)
+        self._step("0.1", "初始化随机种子（seed=%d）", self.cfg.generation.random_state)
         random.seed(self.cfg.generation.random_state)
 
-        self._step("0", "加载 OHLCV 数据面板")
+        self._step("0.2", "加载 OHLCV 数据面板")
         df = self._load()
         os.makedirs(self.proj_dir, exist_ok=True)
 
-        self._step("0", "计算 %d 日前向收益标签", self.cfg.forecast_horizon)
+        self._step("0.3", "计算 %d 日前向收益标签", self.cfg.forecast_horizon)
         label = self.compute_label(df, self.cfg.forecast_horizon)
 
-        self._step("0", "生成列描述")
+        self._step("0.4", "生成列描述")
         columns_desc = self._describe(df)
         columns_num = len(df.columns)
 
-        self._step("0", "配置 Agent（%d 列）", columns_num)
+        self._step("0.5", "配置 Agent（%d 列）", columns_num)
         self.agent.columns_desc = columns_desc
         self.agent.columns_num = columns_num
 
         gen = self.cfg.generation
         agent_ids = self.agent.list_agents()
-        self._step("0", "枚举生成 agent（%d 个）", len(agent_ids))
+        self._step("0.6", "枚举生成 agent（%d 个）", len(agent_ids))
 
         result = SearchResult()
 
