@@ -55,34 +55,6 @@ class Agent:
     # ------------------------------------------------------------------ #
     # Prompt building
     # ------------------------------------------------------------------ #
-    def build_generation_prompt(
-        self,
-        agent_id: str,
-        columns_desc: str,
-        columns_num: int,
-        num_per_request: int,
-        forecast_horizon: int,
-        effective_CoT: str = "",
-        ineffective_CoT: str = "",
-    ) -> Tuple[str, str]:
-        """Assemble the full user prompt for one seven-level generation agent.
-
-        The per-agent template is a single complete multi-line prompt with
-        `{placeholder}` tokens (see `_GENERATION_TEMPLATES`); substitution uses
-        `re.sub`/`.replace` only — no formatting or joining.
-        Returns (system_message, user_message).
-        """
-        user = utils.render_placeholders(
-            _GENERATION_TEMPLATES[agent_id],
-            columns_desc=columns_desc,
-            columns_num=columns_num,
-            num_per_request=num_per_request,
-            forecast_horizon=forecast_horizon,
-            effective_block=utils.render_cot_block(_EFFECTIVE_ANALYSIS, effective_CoT),
-            ineffective_block=utils.render_cot_block(_INEFFECTIVE_ANALYSIS, ineffective_CoT),
-        )
-        return _SYSTEM_MESSAGE, user
-
     def build_quality_prompt(self, agent_name: str, **kwargs) -> str:
         """Fill one quality-checker template's `{...}` placeholders."""
         return utils.render_placeholders(_QUALITY[agent_name], **kwargs)
