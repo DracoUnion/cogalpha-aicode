@@ -55,10 +55,6 @@ class Agent:
     # ------------------------------------------------------------------ #
     # Prompt building
     # ------------------------------------------------------------------ #
-    def build_evolution_prompt(self, agent_name: str, **kwargs) -> str:
-        """Fill one evolution template's `{...}` placeholders."""
-        return utils.render_placeholders(_EVOLUTION[agent_name], **kwargs)
-
     # ------------------------------------------------------------------ #
     # LLM driving (llm.complete)
     # ------------------------------------------------------------------ #
@@ -115,8 +111,8 @@ class Agent:
         extra_guidance: str = "",
         temperature: Optional[float] = None,
     ) -> List[ParsedFunction]:
-        user = self.build_evolution_prompt(
-            "mutation_agent",
+        user = utils.render_placeholders(
+            _EVOLUTION["mutation_agent"],
             intro=self._intro(columns_desc, columns_num, num_per_request, forecast_horizon),
             original_factor_code=original_code,
             extra_guidance=extra_guidance,
@@ -139,8 +135,8 @@ class Agent:
         extra_guidance: str = "",
         temperature: Optional[float] = None,
     ) -> List[ParsedFunction]:
-        user = self.build_evolution_prompt(
-            "crossover_agent",
+        user = utils.render_placeholders(
+            _QUALITY["crossover_agent"],
             intro=self._intro(columns_desc, columns_num, num_per_request, forecast_horizon),
             parent_factor_1_code=parent_1,
             parent_factor_2_code=parent_2,
