@@ -190,14 +190,14 @@ class CogAlpha:
         )
 
         # 1) Quality checker (repair + judge + logic improvement).
-        self._step(f"{step}.1", f"检查因子质量 {pf.name}")
+        self._step(f"{step}.1", f"检查因子质量：{pf.name}")
         final_code = self.agent.gate_factor(factor.code, factor.name)
         if final_code is None:
             return None
         factor.code = final_code
 
         # 2) Execute.
-        self._step(f"{step}.2", f"执行因子 {pf.name}")
+        self._step(f"{step}.2", f"执行因子：{pf.name}")
         series = self._execute(factor, data)
         if series is None:
             factor.executable = False
@@ -210,7 +210,7 @@ class CogAlpha:
             return None
 
         # 3) Evaluate.
-        self._step(f"{step}.3", f"评估因子 {pf.name}")
+        self._step(f"{step}.3", f"评估因子：{pf.name}")
         metrics = self.evaluate_factor(series, label)
         factor.set_metrics(metrics)
         factor = self.classify_factor(factor)
@@ -250,9 +250,9 @@ class CogAlpha:
                 self.cfg.forecast_horizon, None,
             )
             pf_names = ', '.join(pf.name for pf in pfs)
-            self._step(f"1.{idx+1}.1", f"生成代码完毕，名称：{pf_names}")
+            self._step(f"1.{idx+1}.1", f"生成代码完毕：{pf_names}")
             for pf in pfs:
-                self._step(f"1.{idx+1}.2", f"生成因子，名称：{pf.name}")
+                self._step(f"1.{idx+1}.2", f"生成因子：{pf.name}")
                 f = self.produce_factor(
                     pf, df, label,
                     theme=agent_id, level=level, agent_id=agent_id,
@@ -261,9 +261,9 @@ class CogAlpha:
                 )
                 if f is not None and f.executable:
                     pool.append(f)
-                    self._step(f"1.{idx+1}.2", f"生成因子完毕，名称：{f.name}")
+                    self._step(f"1.{idx+1}.2", f"生成因子完毕：{f.name}")
                 else:
-                    self._step(f"1.{idx+1}.2", f"生成因子失败，名称：{pf.name}")
+                    self._step(f"1.{idx+1}.2", f"生成因子失败：{pf.name}")
             if pool: break
 
         return pool
