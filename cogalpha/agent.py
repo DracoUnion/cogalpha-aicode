@@ -72,18 +72,14 @@ class Agent:
         `re.sub`/`.replace` only — no formatting or joining.
         Returns (system_message, user_message).
         """
-        user = _GENERATION_TEMPLATES[agent_id]
         user = utils.render_placeholders(
-            user,
+            _GENERATION_TEMPLATES[agent_id],
             columns_desc=columns_desc,
             columns_num=columns_num,
             num_per_request=num_per_request,
             forecast_horizon=forecast_horizon,
-        )
-        user = user.replace(
-            "{effective_block}", utils.render_cot_block(_EFFECTIVE_ANALYSIS, effective_CoT)
-        ).replace(
-            "{ineffective_block}", utils.render_cot_block(_INEFFECTIVE_ANALYSIS, ineffective_CoT)
+            effective_block=utils.render_cot_block(_EFFECTIVE_ANALYSIS, effective_CoT),
+            ineffective_block=utils.render_cot_block(_INEFFECTIVE_ANALYSIS, ineffective_CoT),
         )
         return _SYSTEM_MESSAGE, user
 
