@@ -164,7 +164,7 @@ class CogAlpha:
             factor.elite = elite_pass == total
         return factor
 
-    def produce_factor(
+    def validate_factor(
         self,
         pf: ParsedFunction,
         data: pd.DataFrame,
@@ -242,7 +242,7 @@ class CogAlpha:
         agent_ids = self.agent.list_agents()
         while True:
             agent_id = random.choice(agent_ids)
-            self._step(f"1.{idx+1}.1", f"生成代码，Agent：{agent_id}")
+            self._step(f"1.{idx+1}.1", f"生成因子，Agent：{agent_id}")
             level, _, _ = _AGENTS[agent_id]
             pfs = self.agent.generate_code(
                 agent_id, columns_desc, columns_num,
@@ -250,10 +250,10 @@ class CogAlpha:
                 self.cfg.forecast_horizon, None,
             )
             pf_names = ', '.join(pf.name for pf in pfs)
-            self._step(f"1.{idx+1}.1", f"生成代码完毕：{pf_names}")
+            self._step(f"1.{idx+1}.1", f"生成因子完毕：{pf_names}")
             for pf in pfs:
-                self._step(f"1.{idx+1}.2", f"生成因子：{pf.name}")
-                f = self.produce_factor(
+                self._step(f"1.{idx+1}.2", f"验证因子：{pf.name}")
+                f = self.validate_factor(
                     pf, df, label,
                     theme=agent_id, level=level, agent_id=agent_id,
                     generation=0, source="generated",
@@ -261,9 +261,9 @@ class CogAlpha:
                 )
                 if f is not None and f.executable:
                     pool.append(f)
-                    self._step(f"1.{idx+1}.2", f"生成因子完毕：{f.name}")
+                    self._step(f"1.{idx+1}.2", f"验证因子完毕：{f.name}")
                 else:
-                    self._step(f"1.{idx+1}.2", f"生成因子失败：{pf.name}")
+                    self._step(f"1.{idx+1}.2", f"验证因子失败：{pf.name}")
             if pool: break
 
         return pool
@@ -473,7 +473,7 @@ class CogAlpha:
                 candidates = [(pf, "crossover") for pf in pfs]
 
             for pf, source in candidates:
-                f = self.produce_factor(
+                f = self.validate_factor(
                     pf, df, label,
                     theme=agent_id, level=level, agent_id=agent_id,
                     generation=generation_idx, source=source,

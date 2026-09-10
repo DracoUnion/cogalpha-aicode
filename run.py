@@ -123,7 +123,7 @@ def run_demo(args: argparse.Namespace) -> None:
         m = re.search(r"def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", code)
         name = m.group(1) if m else "factor_demo"
         pf = ParsedFunction(name=name, code=code)
-        f = engine.produce_factor(
+        f = engine.validate_factor(
             pf, df, label, theme="demo", level="demo",
             agent_id="demo", generation=0, source="generated",
         )
