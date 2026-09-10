@@ -340,7 +340,7 @@ class CogAlpha:
                 level, _, _ = _AGENTS[agent_id]
                 parent_pool, result = self._evolve_agent(
                     df, label, columns_desc, columns_num, agent_id, level, parent_pool, result,
-                    step=f"8.{search_idx + 1}.{a}",
+                    step=f"2.{search_idx + 1}.{a}",
                 )
 
         self._step("3", "排序最终候选 / 精英")
