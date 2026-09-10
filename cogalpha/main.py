@@ -175,6 +175,7 @@ class CogAlpha:
         agent_id: str = "",
         generation: int = 0,
         source: str = "generated",
+        step = "",
     ) -> Optional[Factor]:
         """Run quality, execute, and evaluate a parsed function."""
         factor = Factor(
@@ -189,12 +190,14 @@ class CogAlpha:
         )
 
         # 1) Quality checker (repair + judge + logic improvement).
+        self._step(f"{step}.1", f"检查因子质量 {pf.name}")
         final_code = self.agent.gate_factor(factor.code, factor.name)
         if final_code is None:
             return None
         factor.code = final_code
 
         # 2) Execute.
+        self._step(f"{step}.2", f"执行因子 {pf.name}")
         series = self._execute(factor, data)
         if series is None:
             factor.executable = False
@@ -207,6 +210,7 @@ class CogAlpha:
             return None
 
         # 3) Evaluate.
+        self._step(f"{step}.3", f"评估因子 {pf.name}")
         metrics = self.evaluate_factor(series, label)
         factor.set_metrics(metrics)
         factor = self.classify_factor(factor)
@@ -253,6 +257,7 @@ class CogAlpha:
                     pf, df, label,
                     theme=agent_id, level=level, agent_id=agent_id,
                     generation=0, source="generated",
+                    step=f"1.{idx+1}.2",
                 )
                 if f is not None and f.executable:
                     pool.append(f)
