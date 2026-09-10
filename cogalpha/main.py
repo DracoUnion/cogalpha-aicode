@@ -233,18 +233,22 @@ class CogAlpha:
         df: pd.DataFrame, 
         label: pd.Series,
     ) -> List[Factor]:
-        self._step("1", "构建初始父池 #%d", idx)
+        self._step(f"1.{idx+1}", "构建初始父池")
         pool: List[Factor] = []
         agent_ids = self.agent.list_agents()
         while True:
             agent_id = random.choice(agent_ids)
+            self._step(f"1.{idx+1}.1", f"生成代码 {agent_id}")
             level, _, _ = _AGENTS[agent_id]
             pfs = self.agent.generate_code(
                 agent_id, columns_desc, columns_num,
                 self.cfg.generation.num_per_request, 
                 self.cfg.forecast_horizon, None,
             )
+            pf_names = ', '.join(pf.name for pf in pfs)
+            self._step(f"1.{idx+1}.1", f"生成代码完毕 {pf_names}")
             for pf in pfs:
+                self._step(f"1.{idx+1}.2", f"生成因子 {pf.name}")
                 f = self.produce_factor(
                     pf, df, label,
                     theme=agent_id, level=level, agent_id=agent_id,
@@ -252,6 +256,9 @@ class CogAlpha:
                 )
                 if f is not None and f.executable:
                     pool.append(f)
+                    self._step(f"1.{idx+1}.2", f"生成因子完毕 {f.name}")
+                else:
+                    self._step(f"1.{idx+1}.2", f"生成因子失败 {pf.name}")
             if pool: break
 
         return pool
