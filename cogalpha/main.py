@@ -446,45 +446,48 @@ class CogAlpha:
         for round_idx in range(max(1, gen.child_pool_size // max(1, len(parent_pool)))):
             # Choose an evolution operation.
             op = random.choice(["generate", "mutation", "crossover", "crossover_then_mutation"])
-            self._step(f"{step}.{round_idx+1}", "繁殖操作：%s", op)
+            self._step(f"{step}.{round_idx+1}.1", "繁殖操作：%s", op)
             candidates: List = []
+            source = ""
 
             if op == "generate":
-                pfs = self.agent.generate_code(
+                candidates = self.agent.generate_code(
                     agent_id, columns_desc, columns_num,
                     num_per, horizon, feedback,
                 )
-                candidates = [(pf, "generated") for pf in pfs]
+                source = "generated"
 
             elif op == "mutation" and pool:
                 parent = random.choice(pool[: max(1, len(pool) // 2)])
-                pfs = self.agent.mutate(
+                candidates = self.agent.mutate(
                     columns_desc, columns_num, num_per, horizon,
                     parent.code, extra_guidance=feedback.effective,
                 )
-                candidates = [(pf, "mutation") for pf in pfs]
+                source = "mutation"
 
             elif op in ("crossover", "crossover_then_mutation") and len(pool) >= 2:
                 p1, p2 = random.sample(pool[: max(2, len(pool) // 2)], 2)
-                pfs = self.agent.crossover(
+                candidates = self.agent.crossover(
                     columns_desc, columns_num, num_per, horizon,
                     p1.code, p2.code, extra_guidance=feedback.effective,
                 )
-                candidates = [(pf, "crossover") for pf in pfs]
+                source = "crossover"
+            cand_names = ', '.join(pf.name for pf in candidates)
+            self._step(f"{step}.{round_idx+1}.1", "繁殖操作完毕：%s", cand_names)
 
-            for pf, source in candidates:
-                self._step(f"{step}.{round_idx+1}", "检验因子：%s", pf.name)
+            for pf in candidates:
+                self._step(f"{step}.{round_idx+1}.2", "验证因子：%s", pf.name)
                 f = self.validate_factor(
                     pf, df, label,
                     theme=agent_id, level=level, agent_id=agent_id,
                     generation=generation_idx, source=source,
-                    step=f"{step}.{round_idx+1}",
+                    step=f"{step}.{round_idx+1}.2",
                 )
                 if f is not None and f.executable and f.qualified:
-                    self._step(f"{step}.{round_idx+1}", "检验因子成功：%s", f.name)
+                    self._step(f"{step}.{round_idx+1}.2", "检验因子成功：%s", f.name)
                     new_factors.append(f)
                 else:
-                    self._step(f"{step}.{round_idx+1}", "检验因子失败：%s", pf.name)
+                    self._step(f"{step}.{round_idx+1}.2", "检验因子失败：%s", pf.name)
 
         return new_factors[: gen.child_pool_size]
 
