@@ -432,7 +432,6 @@ class CogAlpha:
 
     def _tr_breed(
         self,
-        round_idx,
         gen_idx,
         df, label, columns_desc, columns_num,
         parent_pool, feedback, 
@@ -444,7 +443,7 @@ class CogAlpha:
         horizon = self.cfg.forecast_horizon
         # Choose an evolution operation.
         op = random.choice(["generate", "mutation", "crossover", "crossover_then_mutation"])
-        self._step(f"{step}.{round_idx+1}.1", "繁殖操作：%s", op)
+        self._step(f"{step}.1", "繁殖操作：%s", op)
         candidates: List = []
         source = ""
 
@@ -473,21 +472,21 @@ class CogAlpha:
                 )
                 source = "crossover"
             cand_names = ', '.join(pf.name for pf in candidates)
-            self._step(f"{step}.{round_idx+1}.1", "繁殖操作完毕：%s", cand_names)
+            self._step(f"{step}.1", "繁殖操作完毕：%s", cand_names)
 
             for pf in candidates:
-                self._step(f"{step}.{round_idx+1}.2", "验证因子：%s", pf.name)
+                self._step(f"{step}.2", "验证因子：%s", pf.name)
                 f = self.validate_factor(
                     pf, df, label,
                     theme=agent_id, level="breed", agent_id=agent_id,
                     generation=gen_idx, source=source,
-                    step=f"{step}.{round_idx+1}.2",
+                    step=f"{step}.2",
                 )
                 if f is not None and f.executable and f.qualified:
-                    self._step(f"{step}.{round_idx+1}.2", "检验因子成功：%s", f.name)
+                    self._step(f"{step}.2", "检验因子成功：%s", f.name)
                     new_factors.append(f)
                 else:
-                    self._step(f"{step}.{round_idx+1}.2", "检验因子失败：%s", pf.name)
+                    self._step(f"{step}.2", "检验因子失败：%s", pf.name)
             if new_factors: break
         return new_factors
 
@@ -529,10 +528,10 @@ class CogAlpha:
         for round_idx in range(rest):
             h = trpool.submit(
                 self._tr_breed,
-                round_idx, gen_idx,
+                gen_idx,
                 df, label, columns_desc, columns_num,
                 parent_pool, feedback, 
-                step=step,
+                step=f'{step}.{round_idx+1}',
             )
             hdls.append(h)
             if len(hdls) > cfg.breed_threads:
