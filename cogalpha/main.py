@@ -351,12 +351,16 @@ class CogAlpha:
         self._step("2", "进化搜索（%d 次搜索 × %d 个 agent）", gen.evolution_searches, len(agent_ids))
         for search_idx in range(gen.evolution_searches):
             for a, agent_id in enumerate(agent_ids, 1):
-                self._step(f"2.{search_idx + 1}.{a}", "进化搜索 %d/%d，agent %s",
-                           search_idx + 1, gen.evolution_searches, agent_id)
+                evo_idx = search_idx * len(agent_ids) + a + 1
+                self._step(
+                    f"2.{evo_idx}", 
+                    "进化搜索 %d/%d，Agent：%s",
+                    search_idx + 1, gen.evolution_searches, agent_id
+                )
                 level, _, _ = _AGENTS[agent_id]
                 parent_pool, result = self._evolve_agent(
                     df, label, columns_desc, columns_num, agent_id, level, parent_pool, result,
-                    step=f"2.{search_idx + 1}.{a}",
+                    step=f"2.{evo_idx}",
                 )
 
         self._step("3", "排序最终候选 / 精英")
