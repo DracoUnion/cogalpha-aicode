@@ -118,3 +118,6 @@ Thumbs.db
 *.mp3
 *.avi
 *.wav
+
+all.csv
+all/
