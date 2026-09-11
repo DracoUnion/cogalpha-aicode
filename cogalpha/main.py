@@ -437,45 +437,47 @@ class CogAlpha:
         candidates: List = []
         source = ""
 
-        if op == "generate":
-            agent_id = random.choice(_AGENTS.keys())
-            candidates = self.agent.generate_code(
-                agent_id, columns_desc, columns_num,
-                num_per, horizon, feedback,
-            )
-            source = "generated"
+        while True:
+            if op == "generate":
+                agent_id = random.choice(_AGENTS.keys())
+                candidates = self.agent.generate_code(
+                    agent_id, columns_desc, columns_num,
+                    num_per, horizon, feedback,
+                )
+                source = "generated"
 
-        elif op == "mutation" and parent_pool:
-            parent = random.choice(parent_pool[: max(1, len(parent_pool) // 2)])
-            candidates = self.agent.mutate(
-                columns_desc, columns_num, num_per, horizon,
-                parent.code, extra_guidance=feedback.effective,
-            )
-            source = "mutation"
+            elif op == "mutation" and parent_pool:
+                parent = random.choice(parent_pool[: max(1, len(parent_pool) // 2)])
+                candidates = self.agent.mutate(
+                    columns_desc, columns_num, num_per, horizon,
+                    parent.code, extra_guidance=feedback.effective,
+                )
+                source = "mutation"
 
-        elif op in ("crossover", "crossover_then_mutation") and len(pool) >= 2:
-            p1, p2 = random.sample(parent_pool[: max(2, len(parent_pool) // 2)], 2)
-            candidates = self.agent.crossover(
-                columns_desc, columns_num, num_per, horizon,
-                p1.code, p2.code, extra_guidance=feedback.effective,
-            )
-            source = "crossover"
-        cand_names = ', '.join(pf.name for pf in candidates)
-        self._step(f"{step}.{round_idx+1}.1", "繁殖操作完毕：%s", cand_names)
+            elif op in ("crossover", "crossover_then_mutation") and len(pool) >= 2:
+                p1, p2 = random.sample(parent_pool[: max(2, len(parent_pool) // 2)], 2)
+                candidates = self.agent.crossover(
+                    columns_desc, columns_num, num_per, horizon,
+                    p1.code, p2.code, extra_guidance=feedback.effective,
+                )
+                source = "crossover"
+            cand_names = ', '.join(pf.name for pf in candidates)
+            self._step(f"{step}.{round_idx+1}.1", "繁殖操作完毕：%s", cand_names)
 
-        for pf in candidates:
-            self._step(f"{step}.{round_idx+1}.2", "验证因子：%s", pf.name)
-            f = self.validate_factor(
-                pf, df, label,
-                theme=agent_id, level="breed", agent_id=agent_id,
-                generation=generation_idx, source=source,
-                step=f"{step}.{round_idx+1}.2",
-            )
-            if f is not None and f.executable and f.qualified:
-                self._step(f"{step}.{round_idx+1}.2", "检验因子成功：%s", f.name)
-                new_factors.append(f)
-            else:
-                self._step(f"{step}.{round_idx+1}.2", "检验因子失败：%s", pf.name)
+            for pf in candidates:
+                self._step(f"{step}.{round_idx+1}.2", "验证因子：%s", pf.name)
+                f = self.validate_factor(
+                    pf, df, label,
+                    theme=agent_id, level="breed", agent_id=agent_id,
+                    generation=generation_idx, source=source,
+                    step=f"{step}.{round_idx+1}.2",
+                )
+                if f is not None and f.executable and f.qualified:
+                    self._step(f"{step}.{round_idx+1}.2", "检验因子成功：%s", f.name)
+                    new_factors.append(f)
+                else:
+                    self._step(f"{step}.{round_idx+1}.2", "检验因子失败：%s", pf.name)
+            if new_factors: break
         return new_factors
 
     # ------------------------------------------------------------------ #
