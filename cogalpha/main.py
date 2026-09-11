@@ -356,7 +356,9 @@ class CogAlpha:
                 evo_idx + 1, gen.evolution_searches
             )
             parent_pool, result = self._evolve_agent(
-                df, label, columns_desc, columns_num, parent_pool, result,
+                evo_idx, 
+                df, label, columns_desc, 
+                columns_num, parent_pool, result,
                 step=f"2.{evo_idx}",
             )
 
@@ -373,6 +375,7 @@ class CogAlpha:
     # ------------------------------------------------------------------ #
     def _evolve_agent(
         self,
+        evo_idx: int,
         df: pd.DataFrame,
         label: pd.Series,
         columns_desc: str,
@@ -391,6 +394,7 @@ class CogAlpha:
         for gen_idx in range(gen.generations_per_evo):
             # Breed the child pool from the parent pool.
             children = self._breed(
+                evo_idx, gen_idx,
                 df, label, columns_desc, columns_num,
                 parent_pool, feedback, gen_idx,
                 step=f"{step}.2.{gen_idx+1}",
@@ -485,6 +489,8 @@ class CogAlpha:
     # ------------------------------------------------------------------ #
     def _breed(
         self,
+        evo_idx: int,
+        gen_idx: int, 
         df, label, columns_desc, columns_num,
         parent_pool, feedback, generation_idx,
         *,
@@ -492,8 +498,17 @@ class CogAlpha:
     ) -> List[Factor]:
         cfg = self.cfg
         gen = cfg.generation
-        new_factors: List[Factor] = []
         parent_pool = utils.rank_factors(parent_pool)
+        child_pool_fname = f'child_pool_{evo_idx}_{gen_idx}.yaml'
+        child_pool_fname = path.join(self.proj_dir, child_pool_fname)
+        if path.isfile(child_pool_fname) and \
+           path.getsize(child_pool_fname):
+            new_factors = yaml.load(
+                open(child_pool_fname, encoding='utf8').read())
+            new_factors = parse_obj_as(List[Factor], new_factors)
+        else:
+            new_factors: List[Factor] = []
+            utils.write_yaml(child_pool_fname, new_factors)
 
         trpool = ThreadPoolExecutor(cfg.breed_threads)
         hdls = []
@@ -512,10 +527,13 @@ class CogAlpha:
                 for h in hdls:
                     new_factors += h.result()
                 hdls = []
+            if round_idx % 10 == 0:
+                utils.write_yaml(child_pool_fname, new_factors)
         for h in hdls:
             new_factors += h.result()
         hdls = []
-            
+
+        utils.write_yaml(child_pool_fname, new_factors)    
         return new_factors[: gen.child_pool_size]
 
     # ------------------------------------------------------------------ #
