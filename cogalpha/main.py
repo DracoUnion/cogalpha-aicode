@@ -439,7 +439,7 @@ class CogAlpha:
 
         while True:
             if op == "generate":
-                agent_id = random.choice(_AGENTS.keys())
+                agent_id = random.choice(list(_AGENTS.keys()))
                 candidates = self.agent.generate_code(
                     agent_id, columns_desc, columns_num,
                     num_per, horizon, feedback,
