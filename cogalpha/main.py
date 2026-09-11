@@ -359,7 +359,7 @@ class CogAlpha:
                 evo_idx, 
                 df, label, columns_desc, 
                 columns_num, parent_pool, result,
-                step=f"2.{evo_idx}",
+                step=f"2.{evo_idx+1}",
             )
 
         self._step("3", "排序最终候选 / 精英")
@@ -391,8 +391,14 @@ class CogAlpha:
         prev_elite = utils.rank_factors(result.elite)[: gen.carry_elite_top]
         feedback: FeedbackSummary = FeedbackSummary()
 
+        self._step(f"{step}.2", "繁殖生成（%d 次）", gen.generations_per_evo)
         for gen_idx in range(gen.generations_per_evo):
             # Breed the child pool from the parent pool.
+            self._step(
+                f"{step}.2.{gen_idx+1}", "繁殖生成 %d/%d",
+                gen_idx + 1,
+                gen.generations_per_evo
+            )
             children = self._breed(
                 evo_idx, gen_idx,
                 df, label, columns_desc, columns_num,
