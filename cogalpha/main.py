@@ -427,8 +427,9 @@ class CogAlpha:
     def _tr_breed(
         self,
         round_idx,
+        gen_idx,
         df, label, columns_desc, columns_num,
-        parent_pool, feedback, generation_idx,
+        parent_pool, feedback, 
         *,
         step: str,
     ):
@@ -473,7 +474,7 @@ class CogAlpha:
                 f = self.validate_factor(
                     pf, df, label,
                     theme=agent_id, level="breed", agent_id=agent_id,
-                    generation=generation_idx, source=source,
+                    generation=gen_idx, source=source,
                     step=f"{step}.{round_idx+1}.2",
                 )
                 if f is not None and f.executable and f.qualified:
@@ -517,10 +518,9 @@ class CogAlpha:
         for round_idx in range(rest):
             h = trpool.submit(
                 self._tr_breed,
-                round_idx,
+                round_idx, gen_idx,
                 df, label, columns_desc, columns_num,
                 parent_pool, feedback, 
-                generation_idx,
                 step=step,
             )
             hdls.append(h)
