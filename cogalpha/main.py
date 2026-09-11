@@ -504,7 +504,7 @@ class CogAlpha:
         child_pool_fname = path.join(self.proj_dir, child_pool_fname)
         if path.isfile(child_pool_fname) and \
            path.getsize(child_pool_fname):
-            new_factors = yaml.load(
+            new_factors = yaml.safe_load(
                 open(child_pool_fname, encoding='utf8').read())
             new_factors = parse_obj_as(List[Factor], new_factors)
         else:
