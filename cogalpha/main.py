@@ -288,7 +288,7 @@ class CogAlpha:
             len(parent_pool),
         )
 
-        trpool = ThreadPoolExecutor(self.cfg.threads)
+        trpool = ThreadPoolExecutor(self.cfg.init_threads)
         hdls: List[Future] = []
         rest_num = max(0, self.cfg.generation.initial_pool_size - len(parent_pool))
         for i in range(rest_num):
@@ -298,7 +298,7 @@ class CogAlpha:
                 df, label,
             )
             hdls.append(h)
-            if len(hdls) > self.cfg.threads:
+            if len(hdls) > self.cfg.init_threads:
                 for h in hdls:
                     parent_pool += h.result()
                 hdls = []
