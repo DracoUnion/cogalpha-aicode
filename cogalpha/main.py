@@ -351,7 +351,7 @@ class CogAlpha:
         self._step("2", "进化搜索（%d 次搜索）", gen.evolution_searches)
         for evo_idx in range(gen.evolution_searches):
             self._step(
-                f"2.{evo_idx}", 
+                f"2.{evo_idx+1}", 
                 "进化搜索 %d/%d",
                 evo_idx + 1, gen.evolution_searches
             )
