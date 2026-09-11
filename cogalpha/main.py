@@ -394,34 +394,31 @@ class CogAlpha:
         feedback: FeedbackSummary = FeedbackSummary()
 
         total_gens = gen.sub_loops * gen.generations_per_sub_loop
-        for sub in range(gen.sub_loops):
-            for g in range(gen.generations_per_sub_loop):
-                generation_idx = sub * gen.generations_per_sub_loop + g + 1
+        for gen_idx in range(total_gens):
+            # Breed the child pool from the parent pool.
+            children = self._breed(
+                df, label, columns_desc, columns_num,
+                agent_id, level, parent_pool, feedback, gen_idx,
+                step=f"{step}.2.{gen_idx}",
+            )
 
-                # Breed the child pool from the parent pool.
-                children = self._breed(
-                    df, label, columns_desc, columns_num,
-                    agent_id, level, parent_pool, feedback, generation_idx,
-                    step=f"{step}.2.{generation_idx}",
-                )
+            # Inject qualified/elite children into the parent pool.
+            if children:
+                parent_pool = self._inject(parent_pool, children, gen.parent_pool_size)
+                for c in children:
+                    result.candidates.append(c)
+                    if c.elite:
+                        result.elite.append(c)
 
-                # Inject qualified/elite children into the parent pool.
-                if children:
-                    parent_pool = self._inject(parent_pool, children, gen.parent_pool_size)
-                    for c in children:
-                        result.candidates.append(c)
-                        if c.elite:
-                            result.elite.append(c)
+            # Refresh adaptive feedback every injection window.
+            if gen_idx % gen.inject_every == 0:
+                feedback = self._refresh_feedback(result.candidates)
 
-                # Refresh adaptive feedback every injection window.
-                if generation_idx % gen.inject_every == 0:
-                    feedback = self._refresh_feedback(result.candidates)
-
-                self._step(
-                    f"{step}.2.{generation_idx}", "第 %d/%d 代：children=%d qualified=%d elite=%d",
-                    generation_idx, total_gens,
-                    len(children), sum(1 for c in children if c.qualified), len(result.elite),
-                )
+            self._step(
+                f"{step}.2.{gen_idx}", "第 %d/%d 代：children=%d qualified=%d elite=%d",
+                gen_idx, total_gens,
+                len(children), sum(1 for c in children if c.qualified), len(result.elite),
+            )
 
         # Carry forward the previous elites to seed the next search.
         self._step(f"{step}.3", "推进精英到下一轮搜索")
