@@ -136,7 +136,7 @@ class Agent:
         temperature: Optional[float] = None,
     ) -> List[ParsedFunction]:
         user = utils.render_placeholders(
-            _QUALITY["crossover_agent"],
+            _EVOLUTION["crossover_agent"],
             intro=self._intro(columns_desc, columns_num, num_per_request, forecast_horizon),
             parent_factor_1_code=parent_1,
             parent_factor_2_code=parent_2,
