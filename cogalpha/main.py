@@ -396,7 +396,7 @@ class CogAlpha:
             children = self._breed(
                 evo_idx, gen_idx,
                 df, label, columns_desc, columns_num,
-                parent_pool, feedback, gen_idx,
+                parent_pool, feedback,
                 step=f"{step}.2.{gen_idx+1}",
             )
 
@@ -492,7 +492,7 @@ class CogAlpha:
         evo_idx: int,
         gen_idx: int, 
         df, label, columns_desc, columns_num,
-        parent_pool, feedback, generation_idx,
+        parent_pool, feedback,
         *,
         step: str,
     ) -> List[Factor]:
