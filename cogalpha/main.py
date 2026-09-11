@@ -519,8 +519,13 @@ class CogAlpha:
 
         trpool = ThreadPoolExecutor(cfg.breed_threads)
         hdls = []
-        total = max(1, gen.child_pool_size // max(1, len(parent_pool)))
-        rest = max(total - len(new_factors), 0)
+        rest = max(gen.child_pool_size - len(new_factors), 0)
+        self._step(
+            step, 
+            "构建子池，目标 %d 个，已有 %d 个",
+            gen.child_pool_size,
+            len(new_factors),
+        )
         for round_idx in range(rest):
             h = trpool.submit(
                 self._tr_breed,
