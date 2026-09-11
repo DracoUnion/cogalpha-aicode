@@ -348,20 +348,17 @@ class CogAlpha:
         parent_pool = self._step_build_initial_parent_pool(columns_desc, columns_num, df, label, result)
 
         # --- Phase 2: evolution searches over each agent. ---
-        self._step("2", "进化搜索（%d 次搜索 × %d 个 agent）", gen.evolution_searches, len(agent_ids))
-        for search_idx in range(gen.evolution_searches):
-            for a, agent_id in enumerate(agent_ids, 1):
-                evo_idx = search_idx * len(agent_ids) + a + 1
-                self._step(
-                    f"2.{evo_idx}", 
-                    "进化搜索 %d/%d，Agent：%s",
-                    search_idx + 1, gen.evolution_searches, agent_id
-                )
-                level, _, _ = _AGENTS[agent_id]
-                parent_pool, result = self._evolve_agent(
-                    df, label, columns_desc, columns_num, agent_id, level, parent_pool, result,
-                    step=f"2.{evo_idx}",
-                )
+        self._step("2", "进化搜索（%d 次搜索）", gen.evolution_searches)
+        for evo_idx in range(gen.evolution_searches):
+            self._step(
+                f"2.{evo_idx}", 
+                "进化搜索 %d/%d",
+                evo_idx + 1, gen.evolution_searches
+            )
+            parent_pool, result = self._evolve_agent(
+                df, label, columns_desc, columns_num, parent_pool, result,
+                step=f"2.{evo_idx}",
+            )
 
         self._step("3", "排序最终候选 / 精英")
         result.candidates = utils.rank_factors(result.candidates)
@@ -380,8 +377,6 @@ class CogAlpha:
         label: pd.Series,
         columns_desc: str,
         columns_num: int,
-        agent_id: str,
-        level: str,
         parent_pool: List[Factor],
         result: SearchResult,
         *,
@@ -398,7 +393,7 @@ class CogAlpha:
             # Breed the child pool from the parent pool.
             children = self._breed(
                 df, label, columns_desc, columns_num,
-                agent_id, level, parent_pool, feedback, gen_idx,
+                parent_pool, feedback, gen_idx,
                 step=f"{step}.2.{gen_idx+1}",
             )
 
@@ -430,7 +425,7 @@ class CogAlpha:
         self,
         round_idx,
         df, label, columns_desc, columns_num,
-        agent_id, level, parent_pool, feedback, generation_idx,
+        parent_pool, feedback, generation_idx,
         *,
         step: str,
     ):
@@ -444,6 +439,7 @@ class CogAlpha:
         source = ""
 
         if op == "generate":
+            agent_id = random.choice(_AGENTS.keys())
             candidates = self.agent.generate_code(
                 agent_id, columns_desc, columns_num,
                 num_per, horizon, feedback,
@@ -472,7 +468,7 @@ class CogAlpha:
             self._step(f"{step}.{round_idx+1}.2", "验证因子：%s", pf.name)
             f = self.validate_factor(
                 pf, df, label,
-                theme=agent_id, level=level, agent_id=agent_id,
+                theme=agent_id, level="breed", agent_id=agent_id,
                 generation=generation_idx, source=source,
                 step=f"{step}.{round_idx+1}.2",
             )
@@ -489,7 +485,7 @@ class CogAlpha:
     def _breed(
         self,
         df, label, columns_desc, columns_num,
-        agent_id, level, parent_pool, feedback, generation_idx,
+        parent_pool, feedback, generation_idx,
         *,
         step: str,
     ) -> List[Factor]:
@@ -506,7 +502,7 @@ class CogAlpha:
                 self._tr_breed,
                 round_idx,
                 df, label, columns_desc, columns_num,
-                agent_id, level, parent_pool, feedback, 
+                parent_pool, feedback, 
                 generation_idx,
                 step=step,
             )
