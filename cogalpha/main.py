@@ -446,7 +446,7 @@ class CogAlpha:
         for round_idx in range(max(1, gen.child_pool_size // max(1, len(parent_pool)))):
             # Choose an evolution operation.
             op = random.choice(["generate", "mutation", "crossover", "crossover_then_mutation"])
-            logger.debug("[%s.%d] 繁殖操作：%s", step, round_idx + 1, op)
+            self._step(f"{step}.{round_idx+1}", "繁殖操作：%s", op)
             candidates: List = []
 
             if op == "generate":
@@ -473,13 +473,18 @@ class CogAlpha:
                 candidates = [(pf, "crossover") for pf in pfs]
 
             for pf, source in candidates:
+                self._step(f"{step}.{round_idx+1}", "检验因子：%s", pf.name)
                 f = self.validate_factor(
                     pf, df, label,
                     theme=agent_id, level=level, agent_id=agent_id,
                     generation=generation_idx, source=source,
+                    step=f"{step}.{round_idx+1}",
                 )
                 if f is not None and f.executable and f.qualified:
+                    self._step(f"{step}.{round_idx+1}", "检验因子成功：%s", f.name)
                     new_factors.append(f)
+                else:
+                    self._step(f"{step}.{round_idx+1}", "检验因子失败：%s", pf.name)
 
         return new_factors[: gen.child_pool_size]
 
