@@ -388,8 +388,7 @@ class CogAlpha:
         prev_elite = utils.rank_factors(result.elite)[: gen.carry_elite_top]
         feedback: FeedbackSummary = FeedbackSummary()
 
-        total_gens = gen.sub_loops * gen.generations_per_sub_loop
-        for gen_idx in range(total_gens):
+        for gen_idx in range(gen.generations_per_evo):
             # Breed the child pool from the parent pool.
             children = self._breed(
                 df, label, columns_desc, columns_num,
@@ -411,7 +410,7 @@ class CogAlpha:
 
             self._step(
                 f"{step}.2.{gen_idx+1}", "第 %d/%d 代：children=%d qualified=%d elite=%d",
-                gen_idx, total_gens,
+                gen_idx, gen.generations_per_evo,
                 len(children), sum(1 for c in children if c.qualified), len(result.elite),
             )
 
