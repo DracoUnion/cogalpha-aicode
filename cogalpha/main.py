@@ -399,7 +399,7 @@ class CogAlpha:
             children = self._breed(
                 df, label, columns_desc, columns_num,
                 agent_id, level, parent_pool, feedback, gen_idx,
-                step=f"{step}.2.{gen_idx}",
+                step=f"{step}.2.{gen_idx+1}",
             )
 
             # Inject qualified/elite children into the parent pool.
@@ -415,7 +415,7 @@ class CogAlpha:
                 feedback = self._refresh_feedback(result.candidates)
 
             self._step(
-                f"{step}.2.{gen_idx}", "第 %d/%d 代：children=%d qualified=%d elite=%d",
+                f"{step}.2.{gen_idx+1}", "第 %d/%d 代：children=%d qualified=%d elite=%d",
                 gen_idx, total_gens,
                 len(children), sum(1 for c in children if c.qualified), len(result.elite),
             )
