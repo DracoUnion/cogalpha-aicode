@@ -459,7 +459,7 @@ class CogAlpha:
                 )
                 source = "mutation"
 
-            elif op in ("crossover", "crossover_then_mutation") and len(pool) >= 2:
+            elif op in ("crossover", "crossover_then_mutation") and len(parent_pool) >= 2:
                 p1, p2 = random.sample(parent_pool[: max(2, len(parent_pool) // 2)], 2)
                 candidates = self.agent.crossover(
                     columns_desc, columns_num, num_per, horizon,
