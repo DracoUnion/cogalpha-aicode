@@ -356,6 +356,26 @@ def call_llm(
     logger.debug(f'ans: {json.dumps(ans, ensure_ascii=False)}')
     return ans
 
+def apply_llm_settings(llm) -> None:
+    """Ensure the module globals used by the openai client are set, and sync
+    ``api_key`` / ``base_url`` from the pydantic ``LLMSettings`` (loaded from
+    ``.env`` / ``COGALPHA_*`` env vars). Values already provided via
+    ``set_openai_props`` (CLI args) are kept when the matching setting is empty.
+    """
+    if not getattr(openai, "user_agent", None):
+        openai.user_agent = "openai-python"
+    if getattr(openai, "stream", None) is None:
+        openai.stream = False
+    if getattr(openai, "timeout", None) is None:
+        openai.timeout = openai.Timeout(read=120, connect=60)
+    if not getattr(openai, "rpre", None):
+        openai.rpre = ""
+    if getattr(llm, "api_key", None):
+        openai.api_key = llm.api_key
+    if getattr(llm, "base_url", None):
+        openai.base_url = llm.base_url
+
+
 def set_openai_props(args):
     openai.api_key = args.key
     openai.base_url = args.host

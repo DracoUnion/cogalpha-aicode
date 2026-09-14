@@ -59,8 +59,14 @@ class LLMSettings(BaseSettings):
     quality_temperature: float = Field(default=0.8)
 
 
-class GenerationSettings(BaseModel):
-    """Population and evolution-loop sizes from the paper."""
+class GenerationSettings(BaseSettings):
+    """Population and evolution-loop sizes from the paper.
+
+    Reads ``COGALPHA_*`` env vars / ``.env`` so the documented
+    ``COGALPHA_INITIAL_POOL_SIZE``-style settings actually take effect.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="COGALPHA_", env_file=".env", extra="ignore")
 
     initial_pool_size: int = Field(default=80, description="Initial pool size (paper: 80).")
     parent_pool_size: int = Field(default=32, description="Parent pool size (paper: 32).")

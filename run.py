@@ -23,6 +23,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import os
+from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -141,7 +142,6 @@ def run_demo(args: argparse.Namespace) -> None:
 
 def run_selftest() -> int:
     from cogalpha import utils
-    from cogalpha.agent import Agent
 
     code = _DEMO_FACTORS[0]
     issues = utils.check_code_static(code, "factor_mom_ret5")
@@ -151,7 +151,7 @@ def run_selftest() -> int:
     bad2 = "def g(df):\n    while True:\n        pass"
     assert any("infinite" in i for i in utils.check_code_static(bad2, "g"))
 
-    parsed = Agent.parse_generated_code(
+    parsed = utils.parse_generated_code(
         "[function-1]\ndef x(df):\n    df_copy = df.copy()\n    return df_copy['x']\n[/function-1]"
     )
     assert len(parsed) == 1 and parsed[0].name == "x", parsed
@@ -160,9 +160,10 @@ def run_selftest() -> int:
 
 
 def main() -> int:
+    load_dotenv()  # make OPENAI_* / COGALPHA_* from .env available to the CLI defaults
     openai_key = os.environ.get('OPENAI_API_KEY')
     openai_url = os.environ.get('OPENAI_BASE_URL')
-    openai_model = os.environ.get('OPENAI_CHAT_MODEL', 'gpt-3.5-turbo')
+    openai_model = os.environ.get('OPENAI_CHAT_MODEL')
     openai_vmodel = os.environ.get('OPENAI_VIS_MODEL', '')
     openai_tti_model = os.environ.get('OPENAI_TTI_MODEL', '')
 
