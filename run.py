@@ -196,7 +196,18 @@ def main() -> int:
     parser.add_argument("--self-test", action="store_true", help="Run the import/static-check self test.")
     args = parser.parse_args()
 
-    logging.basicConfig(level=getattr(logging, args.log.upper()), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    log_level = getattr(logging, args.log.upper())
+    root = logging.getLogger()
+    root.setLevel(log_level)
+    for h in root.handlers:
+        h.setLevel(log_level)
+    # Mirror run progress to a file so results are reviewable after the run.
+    log_file = Path(args.output) / "run.log"
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    fh = logging.FileHandler(log_file, encoding="utf8")
+    fh.setLevel(log_level)
+    fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    root.addHandler(fh)
 
     if args.self_test:
         return run_selftest()

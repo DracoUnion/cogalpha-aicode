@@ -369,6 +369,7 @@ class Agent:
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             model or self.cfg.llm.model,
             temp=temperature,
+            max_tokens=self.cfg.llm.max_tokens,
         )
 
     def complete_quality(
@@ -384,6 +385,7 @@ class Agent:
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             model or self.cfg.llm.quality_model,
             temp=temperature if temperature is not None else self.cfg.llm.quality_temperature,
+            max_tokens=self.cfg.llm.max_tokens,
         )
 
     def complete_json(
@@ -402,5 +404,6 @@ class Agent:
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             model_name or self.cfg.llm.quality_model,
             temp=temperature if temperature is not None else self.cfg.llm.quality_temperature,
+            max_tokens=self.cfg.llm.max_tokens,
             parse_output=parse_output,
         )
