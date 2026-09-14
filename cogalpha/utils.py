@@ -109,22 +109,26 @@ def quality_corrected(raw: str) -> str:
 # Evaluation / classification helpers (moved from main)
 # --------------------------------------------------------------------------- #
 def daily_corr(factor: pd.Series, label: pd.Series, method: str) -> np.ndarray:
-    dates = factor.index.get_level_values("date")
-    out = []
-    for date in pd.unique(dates):
-        mask = factor.index.get_level_values("date") == date
-        x = factor[mask].to_numpy(dtype=float)
-        y = label[mask].to_numpy(dtype=float)
+    """Per-date cross-sectional correlation between `factor` and `label`.
+
+    `factor` and `label` must share the same ``(date, ticker)`` MultiIndex.
+    Grouping by the date level once (O(rows)) is far faster than building a
+    full-length boolean mask for every date (O(dates x rows)).
+    """
+    tmp = pd.DataFrame({"f": factor, "l": label})
+
+    def _corr(g: pd.DataFrame) -> float:
+        x = g["f"].to_numpy(dtype=float)
+        y = g["l"].to_numpy(dtype=float)
         if len(x) < 5:
-            continue
+            return np.nan
         if method == "pearson":
-            correlation = np.corrcoef(x, y)[0, 1]
-        else:
-            with np.errstate(invalid="ignore"):
-                correlation = stats.spearmanr(x, y).statistic
-        if np.isfinite(correlation):
-            out.append(correlation)
-    return np.asarray(out, dtype=float)
+            return np.corrcoef(x, y)[0, 1]
+        with np.errstate(invalid="ignore"):
+            return stats.spearmanr(x, y).statistic
+
+    out = tmp.groupby(level="date").apply(_corr, include_groups=False).to_numpy(dtype=float)
+    return out[np.isfinite(out)]
 
 
 def mutual_info(contingency: np.ndarray) -> float:
