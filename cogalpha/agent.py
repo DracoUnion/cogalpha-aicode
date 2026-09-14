@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from . import utils
 from .models import CogAlphaConfig, FeedbackSummary, JudgeResult, ParsedFunction, QualityResult, Factor
-from .openai import call_llm_retry
+from .openai import apply_llm_settings, call_llm_retry
 from .utils import _render_examples, ext_code_block
 from .prompts import (
     _AGENTS,
@@ -51,6 +51,9 @@ class Agent:
         self.columns_desc = columns_desc
         self.columns_num = columns_num
         self.max_repair = cfg.generation.max_repair_attempts or utils.MAX_REPAIR_ATTEMPTS_DEFAULT
+        # Sync the pydantic LLMSettings (.env / COGALPHA_* env vars) into the
+        # openai client globals so a plain `CogAlpha(config).run()` works too.
+        apply_llm_settings(cfg.llm)
 
     # ------------------------------------------------------------------ #
     # Prompt building
