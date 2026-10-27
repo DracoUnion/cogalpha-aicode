@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from cogalpha.models import CogAlphaConfig  # noqa: E402
 from cogalpha.main import CogAlpha  # noqa: E402
-from cogalpha.openai import set_openai_props
+from cogalpha.openai import OpenAIClient  # noqa: E402
 
 
 def build_config(args: argparse.Namespace) -> CogAlphaConfig:
@@ -101,7 +101,7 @@ def run_demo(args: argparse.Namespace) -> None:
     from cogalpha import utils
     from cogalpha.models import ParsedFunction
 
-    set_openai_props(args)
+    client = OpenAIClient.from_args(args)
     cfg = build_config(args)
     cfg.data_path = ""
     cfg.use_llm = False  # offline demo: static checks only
@@ -109,7 +109,7 @@ def run_demo(args: argparse.Namespace) -> None:
 
     print("== CogAlpha demo (offline) ==")
     df = synthetic_panel()
-    engine = CogAlpha(cfg)  # no API calls made (cfg.use_llm is False)
+    engine = CogAlpha(cfg, client=client)  # no API calls made (cfg.use_llm is False)
     label = engine.compute_label(df, cfg.forecast_horizon)
     columns_desc = utils.build_column_desc_manual(list(df.columns))
     columns_num = len(df.columns)
@@ -141,7 +141,6 @@ def run_demo(args: argparse.Namespace) -> None:
 
 def run_selftest() -> int:
     from cogalpha import utils
-    from cogalpha.agent import Agent
 
     code = _DEMO_FACTORS[0]
     issues = utils.check_code_static(code, "factor_mom_ret5")
@@ -151,7 +150,7 @@ def run_selftest() -> int:
     bad2 = "def g(df):\n    while True:\n        pass"
     assert any("infinite" in i for i in utils.check_code_static(bad2, "g"))
 
-    parsed = Agent.parse_generated_code(
+    parsed = utils.parse_generated_code(
         "[function-1]\ndef x(df):\n    df_copy = df.copy()\n    return df_copy['x']\n[/function-1]"
     )
     assert len(parsed) == 1 and parsed[0].name == "x", parsed
@@ -185,6 +184,7 @@ def main() -> int:
     parser.add_argument("-ct", "--conn-timeout", type=int, default=60, help="")
     parser.add_argument("-rt", "--read-timeout", type=int, default=120, help="")
     parser.add_argument("-rr", "--repetition-regex", default='', help="re for repetition detection")
+    parser.add_argument("-nt", "--no-think", action='store_true', help="disable model thinking (extra_body: enable_thinking=false)")
     parser.add_argument("--data", default="", help="Path to OHLCV panel (parquet/csv) with (date,ticker) index.")
     parser.add_argument("--horizon", type=int, default=10, help="Forecast horizon in days (paper: 10).")
     parser.add_argument("--output", default="./cogalpha_output", help="Output directory.")
@@ -206,9 +206,9 @@ def main() -> int:
     if not args.data:
         parser.error("Provide --data, or use --demo / --self-test.")
 
-    set_openai_props(args)
+    client = OpenAIClient.from_args(args)
     cfg = build_config(args)
-    engine = CogAlpha(cfg)
+    engine = CogAlpha(cfg, client=client)
     result = engine.run()
     print("\n=== Best factors ===")
     for f in result.best(k=10):

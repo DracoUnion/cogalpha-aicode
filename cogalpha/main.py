@@ -42,9 +42,9 @@ logger = logging.getLogger(__name__)
 class CogAlpha:
     """The framework entry point: data in, evolved alphas out."""
 
-    def __init__(self, cfg: CogAlphaConfig) -> None:
+    def __init__(self, cfg: CogAlphaConfig, client=None) -> None:
         self.cfg = cfg
-        self.agent = Agent(self.cfg)
+        self.agent = Agent(self.cfg, client=client)
         self._logger = logger
         self.proj_dir = re.sub(r'\.\w+$', '', cfg.data_path)
 

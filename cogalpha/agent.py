@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from . import utils
 from .models import CogAlphaConfig, FeedbackSummary, JudgeResult, ParsedFunction, QualityResult, Factor
-from .openai import call_llm_retry
+from .openai import OpenAIClient
 from .utils import _render_examples, ext_code_block
 from .prompts import (
     _AGENTS,
@@ -46,11 +46,17 @@ class Agent:
         cfg: CogAlphaConfig,
         columns_desc: str = "",
         columns_num: int = 0,
+        client: Optional[OpenAIClient] = None,
     ) -> None:
         self.cfg = cfg
         self.columns_desc = columns_desc
         self.columns_num = columns_num
         self.max_repair = cfg.generation.max_repair_attempts or utils.MAX_REPAIR_ATTEMPTS_DEFAULT
+        self.client = client or OpenAIClient(
+            api_key=cfg.llm.api_key,
+            base_url=cfg.llm.base_url,
+            timeout=cfg.llm.timeout,
+        )
 
     # ------------------------------------------------------------------ #
     # Prompt building
@@ -365,7 +371,7 @@ class Agent:
         """A single chat completion; temperature defaults to a random gen value."""
         if temperature is None:
             temperature = random.choice(self.cfg.llm.gen_temperatures)
-        return call_llm_retry(
+        return self.client.call_llm_retry(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             model or self.cfg.llm.model,
             temp=temperature,
@@ -380,7 +386,7 @@ class Agent:
         model: Optional[str] = None,
     ) -> str:
         """A chat completion from a quality-checker agent (fixed temperature)."""
-        return call_llm_retry(
+        return self.client.call_llm_retry(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             model or self.cfg.llm.quality_model,
             temp=temperature if temperature is not None else self.cfg.llm.quality_temperature,
@@ -398,7 +404,7 @@ class Agent:
         """Ask the model to return a JSON object and coerce it into `model`."""
         parse_output = lambda s: \
             model.model_validate_json(ext_code_block(s))
-        return call_llm_retry(
+        return self.client.call_llm_retry(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             model_name or self.cfg.llm.quality_model,
             temp=temperature if temperature is not None else self.cfg.llm.quality_temperature,
